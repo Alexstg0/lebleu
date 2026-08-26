@@ -1,0 +1,31 @@
+{
+  "name": "lebleu-app",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "setup-db": "node scripts/setup-db.mjs"
+  },
+  "dependencies": {
+    "next": "^15.5.19",
+    "pdf-lib": "^1.17.1",
+    "pg": "^8.13.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.11.10",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "pdfjs-dist": "^6.1.200",
+    "sharp": "^0.35.3",
+    "typescript": "^5.7.0"
+  },
+  "overrides": {
+    "postcss": "^8.5.10"
+  }
+}

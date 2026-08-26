@@ -1,0 +1,10 @@
+/node_modules
+/.next
+/.pgdata
+*.log
+.DS_Store
+.env
+.env.*
+.vercel
+
+.vercel

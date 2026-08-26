@@ -1,0 +1,5 @@
+.pgdata
+.env
+.env.*
+node_modules
+.next
