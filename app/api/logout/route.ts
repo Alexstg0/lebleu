@@ -3,6 +3,10 @@ import { cookies } from "next/headers";
 import { getDb } from "@/lib/db";
 import { COOKIE } from "@/lib/auth";
 
+export async function GET() {
+  return NextResponse.json({ ok: true, message: "GET logout test" });
+}
+
 export async function POST() {
   const c = await cookies();
   const token = c.get(COOKIE)?.value;
