@@ -7,4 +7,9 @@
 .env.*
 .vercel
 
-.vercel
+# Archivos de backup y migraciones locales
+db/*.sql.gz
+db/*.zip
+*.sql.gz
+*.zip
+db_esquema_*.zip
