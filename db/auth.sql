@@ -17,3 +17,9 @@ CREATE TABLE IF NOT EXISTS sesiones (
     expires_at  TIMESTAMPTZ NOT NULL,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE TABLE IF NOT EXISTS login_intentos (
+  clave      TEXT PRIMARY KEY,
+  intentos   INT NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

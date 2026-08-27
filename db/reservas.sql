@@ -4,11 +4,11 @@
 CREATE TABLE IF NOT EXISTS reservas (
     id             SERIAL PRIMARY KEY,
     fecha          DATE         NOT NULL,
-    hora           TIME,                       -- hora de salida
+    hora           TIME,
     cliente        TEXT,
     socio_id       INT          REFERENCES socios(id),
     num_personas   INT,
-    duracion_horas NUMERIC(5,2),               -- se llena cuando el viaje ya ocurrió
+    duracion_horas NUMERIC(5,2),
     notas          TEXT,
     created_at     TIMESTAMPTZ  NOT NULL DEFAULT now()
 );

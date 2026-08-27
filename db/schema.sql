@@ -13,14 +13,11 @@
 
 BEGIN;
 
--- ------------------------------------------------------------
 -- 1. CATÁLOGOS
--- ------------------------------------------------------------
-
 CREATE TABLE embarcaciones (
     id            SERIAL PRIMARY KEY,
     nombre        TEXT        NOT NULL,
-    razon_social  TEXT,                       -- ej. "Arrendadora Acma S de RL de CV"
+    razon_social  TEXT,
     matricula     TEXT,
     activo        BOOLEAN     NOT NULL DEFAULT TRUE,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -30,7 +27,7 @@ CREATE TABLE socios (
     id            SERIAL PRIMARY KEY,
     nombre        TEXT          NOT NULL,
     rfc           TEXT,
-    porcentaje    NUMERIC(5,2)  NOT NULL DEFAULT 50.00,   -- participación
+    porcentaje    NUMERIC(5,2)  NOT NULL DEFAULT 50.00,
     activo        BOOLEAN       NOT NULL DEFAULT TRUE,
     created_at    TIMESTAMPTZ   NOT NULL DEFAULT now()
 );
@@ -38,29 +35,26 @@ CREATE TABLE socios (
 CREATE TABLE motores (
     id               SERIAL PRIMARY KEY,
     embarcacion_id   INT     NOT NULL REFERENCES embarcaciones(id) ON DELETE CASCADE,
-    etiqueta         TEXT    NOT NULL,                    -- "Motor B / Babor", "Motor E / Estribor"
+    etiqueta         TEXT    NOT NULL,
     horometro_actual NUMERIC(10,2) NOT NULL DEFAULT 0,
     created_at       TIMESTAMPTZ   NOT NULL DEFAULT now()
 );
 
 CREATE TABLE clientes (
     id          SERIAL PRIMARY KEY,
-    nombre      TEXT    NOT NULL,                         -- "Familia Acosta", "Familia García", o renta externa
-    socio_id    INT     REFERENCES socios(id) ON DELETE SET NULL,  -- NULL = tercero (renta)
+    nombre      TEXT    NOT NULL,
+    socio_id    INT     REFERENCES socios(id) ON DELETE SET NULL,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- ------------------------------------------------------------
 -- 2. PERIODO (ancla del estado de cuenta mensual)
--- ------------------------------------------------------------
-
 CREATE TABLE periodos (
     id                   SERIAL PRIMARY KEY,
     embarcacion_id       INT          NOT NULL REFERENCES embarcaciones(id) ON DELETE CASCADE,
     anio                 INT          NOT NULL,
     mes                  INT          NOT NULL CHECK (mes BETWEEN 1 AND 12),
-    tipo_cambio          NUMERIC(8,4) NOT NULL DEFAULT 1,    -- T/C de referencia del mes (ej. 17.50)
-    precio_litro         NUMERIC(8,4) NOT NULL DEFAULT 0,    -- precio combustible MXN/Lt (ej. 25.08)
+    tipo_cambio          NUMERIC(8,4) NOT NULL DEFAULT 1,
+    precio_litro         NUMERIC(8,4) NOT NULL DEFAULT 0,
     cargo_administracion NUMERIC(14,2) NOT NULL DEFAULT 0,
     estado               TEXT         NOT NULL DEFAULT 'abierto'
                                       CHECK (estado IN ('abierto','cerrado')),
@@ -72,8 +66,8 @@ CREATE TABLE saldos_socio (
     id           SERIAL PRIMARY KEY,
     periodo_id   INT           NOT NULL REFERENCES periodos(id) ON DELETE CASCADE,
     socio_id     INT           NOT NULL REFERENCES socios(id),
-    saldo_inicio NUMERIC(14,2) NOT NULL DEFAULT 0,         -- = saldo_fin del mes anterior (snapshot)
-    saldo_fin    NUMERIC(14,2),                            -- se congela al cerrar el periodo
+    saldo_inicio NUMERIC(14,2) NOT NULL DEFAULT 0,
+    saldo_fin    NUMERIC(14,2),
     UNIQUE (periodo_id, socio_id)
 );
 
@@ -83,16 +77,12 @@ CREATE TABLE aportaciones (
     socio_id    INT           NOT NULL REFERENCES socios(id),
     fecha       DATE          NOT NULL,
     monto       NUMERIC(14,2) NOT NULL,
-    metodo      TEXT,                                       -- transferencia, efectivo, etc.
+    metodo      TEXT,
     referencia  TEXT,
     created_at  TIMESTAMPTZ   NOT NULL DEFAULT now()
 );
 
--- ------------------------------------------------------------
 -- 3. MOVIMIENTOS
--- ------------------------------------------------------------
-
--- Gastos operativos: se reparten 50/50 entre socios.
 CREATE TABLE gastos_operativos (
     id                SERIAL PRIMARY KEY,
     periodo_id        INT           NOT NULL REFERENCES periodos(id) ON DELETE CASCADE,
@@ -104,14 +94,14 @@ CREATE TABLE gastos_operativos (
                                       ('nomina','impuesto','servicio','refaccion','consumible','admin','otro')),
     moneda            TEXT          NOT NULL DEFAULT 'MXN' CHECK (moneda IN ('MXN','USD')),
     monto_original    NUMERIC(14,2) NOT NULL,
-    tipo_cambio       NUMERIC(8,4)  NOT NULL DEFAULT 1,     -- 1 cuando moneda = MXN
+    tipo_cambio       NUMERIC(8,4)  NOT NULL DEFAULT 1,
     monto_mxn         NUMERIC(14,2) GENERATED ALWAYS AS (monto_original * tipo_cambio) STORED,
-    comprobante_folio TEXT,                                 -- factura/UUID, "NA", "SIPARE", etc.
+    comprobante_folio TEXT,
     archivo_url       TEXT,
+    clave_recurrente  TEXT,
     created_at        TIMESTAMPTZ   NOT NULL DEFAULT now()
 );
 
--- Gastos extraordinarios: 50/50 pero LIQUIDACIÓN SEPARADA (fuera del balance operativo).
 CREATE TABLE extraordinarios (
     id                SERIAL PRIMARY KEY,
     periodo_id        INT           NOT NULL REFERENCES periodos(id) ON DELETE CASCADE,
@@ -131,35 +121,33 @@ CREATE TABLE extraordinarios (
     created_at        TIMESTAMPTZ   NOT NULL DEFAULT now()
 );
 
--- Viajes: los costos del viaje SON los gastos variables (100% al socio responsable).
 CREATE TABLE viajes (
     id                      SERIAL PRIMARY KEY,
     periodo_id              INT           NOT NULL REFERENCES periodos(id) ON DELETE CASCADE,
     embarcacion_id          INT           NOT NULL REFERENCES embarcaciones(id),
-    socio_id                INT           REFERENCES socios(id),   -- quién absorbe el costo (NULL en rentas)
+    socio_id                INT           REFERENCES socios(id),
     cliente_id              INT           REFERENCES clientes(id),
-    cliente_nombre          TEXT,                        -- nombre libre (rentas a externos)
-    marinero                TEXT,                        -- nombre del marinero
+    cliente_nombre          TEXT,
+    marinero                TEXT,
     fecha                   DATE          NOT NULL,
     duracion_horas          NUMERIC(5,2),
     num_personas            INT,
-    combustible_inicio      NUMERIC(10,2),               -- lectura del tanque al inicio (litros)
-    combustible_fin         NUMERIC(10,2),               -- lectura del tanque al final (litros)
-    litros                  NUMERIC(10,2) NOT NULL DEFAULT 0,   -- consumo = inicio - fin
+    combustible_inicio      NUMERIC(10,2),
+    combustible_fin         NUMERIC(10,2),
+    litros                  NUMERIC(10,2) NOT NULL DEFAULT 0,
     precio_litro            NUMERIC(8,4)  NOT NULL DEFAULT 0,
     costo_combustible       NUMERIC(14,2) NOT NULL DEFAULT 0,
     costo_marinero          NUMERIC(14,2) NOT NULL DEFAULT 0,
     costo_consumibles       NUMERIC(14,2) NOT NULL DEFAULT 0,
-    consumibles_comprobante TEXT,                            -- ej. "Chedraui SM-91363"
+    consumibles_comprobante TEXT,
     total                   NUMERIC(14,2) GENERATED ALWAYS AS
                               (costo_combustible + costo_marinero + costo_consumibles) STORED,
     es_renta                BOOLEAN       NOT NULL DEFAULT FALSE,
-    bandera                 BOOLEAN       NOT NULL DEFAULT FALSE,   -- marca viajes anómalos (⚠)
+    bandera                 BOOLEAN       NOT NULL DEFAULT FALSE,
     notas                   TEXT,
     created_at              TIMESTAMPTZ   NOT NULL DEFAULT now()
 );
 
--- Lecturas de horómetro por motor en cada viaje.
 CREATE TABLE viaje_horometros (
     id              SERIAL PRIMARY KEY,
     viaje_id        INT           NOT NULL REFERENCES viajes(id) ON DELETE CASCADE,
@@ -171,7 +159,6 @@ CREATE TABLE viaje_horometros (
     CHECK (lectura_fin >= lectura_inicio)
 );
 
--- Ingresos por renta a terceros.
 CREATE TABLE ingresos_renta (
     id               SERIAL PRIMARY KEY,
     periodo_id       INT           NOT NULL REFERENCES periodos(id) ON DELETE CASCADE,
@@ -184,29 +171,25 @@ CREATE TABLE ingresos_renta (
     created_at       TIMESTAMPTZ   NOT NULL DEFAULT now()
 );
 
--- ------------------------------------------------------------
--- 4. BONUS (recomendado): mantenimiento por horas de motor
--- ------------------------------------------------------------
 CREATE TABLE mantenimientos (
     id                  SERIAL PRIMARY KEY,
     motor_id            INT           NOT NULL REFERENCES motores(id) ON DELETE CASCADE,
-    tipo                TEXT          NOT NULL,             -- "Cambio de aceite", "Servicio Mercury", etc.
-    horometro_objetivo  NUMERIC(10,2),                      -- a qué hora toca
-    horometro_realizado NUMERIC(10,2),                      -- NULL = pendiente
+    tipo                TEXT          NOT NULL,
+    horometro_objetivo  NUMERIC(10,2),
+    horometro_realizado NUMERIC(10,2),
     fecha_realizado     DATE,
     costo               NUMERIC(14,2),
     notas               TEXT,
     created_at          TIMESTAMPTZ   NOT NULL DEFAULT now()
 );
 
--- ------------------------------------------------------------
 -- 5. ÍNDICES
--- ------------------------------------------------------------
 CREATE INDEX idx_motores_embarcacion       ON motores(embarcacion_id);
 CREATE INDEX idx_periodos_embarcacion      ON periodos(embarcacion_id);
 CREATE INDEX idx_saldos_periodo            ON saldos_socio(periodo_id);
 CREATE INDEX idx_aportaciones_periodo      ON aportaciones(periodo_id);
 CREATE INDEX idx_operativos_periodo        ON gastos_operativos(periodo_id);
+CREATE INDEX idx_operativos_clave          ON gastos_operativos(clave_recurrente) WHERE clave_recurrente IS NOT NULL;
 CREATE INDEX idx_extraordinarios_periodo   ON extraordinarios(periodo_id);
 CREATE INDEX idx_viajes_periodo            ON viajes(periodo_id);
 CREATE INDEX idx_viajes_socio              ON viajes(socio_id);
@@ -214,11 +197,7 @@ CREATE INDEX idx_horometros_viaje          ON viaje_horometros(viaje_id);
 CREATE INDEX idx_ingresos_periodo          ON ingresos_renta(periodo_id);
 CREATE INDEX idx_mantenimientos_motor      ON mantenimientos(motor_id);
 
--- ------------------------------------------------------------
--- 6. VISTAS — reproducen el estado de cuenta
--- ------------------------------------------------------------
-
--- Gasto variable acumulado por socio en el periodo (Resumen de Gastos Variables).
+-- 6. VISTAS
 CREATE VIEW v_variable_por_socio AS
 SELECT v.periodo_id,
        v.socio_id,
@@ -230,15 +209,11 @@ SELECT v.periodo_id,
 FROM viajes v
 GROUP BY v.periodo_id, v.socio_id;
 
--- Balance operativo por socio (valida $43,470.99 Acosta / $16,136.07 García en mayo 2026).
--- El reparto usa "resto al último socio": el socio con id mayor absorbe el centavo
--- de diferencia cuando el total no es divisible exacto, para que la suma de las
--- partes SIEMPRE sea igual al total (sin el centavo fantasma del redondeo).
 CREATE VIEW v_balance_operativo AS
-WITH op AS (   -- total operativo del periodo (se reparte 50/50)
+WITH op AS (
     SELECT periodo_id, SUM(monto_mxn) AS total_operativo
     FROM gastos_operativos GROUP BY periodo_id
-), renta AS (  -- utilidad de renta del periodo (se reparte 50/50)
+), renta AS (
     SELECT periodo_id, SUM(utilidad) AS total_utilidad
     FROM ingresos_renta GROUP BY periodo_id
 )
@@ -273,7 +248,6 @@ FROM (
          ON ap.periodo_id = s.periodo_id AND ap.socio_id = s.socio_id
 ) t;
 
--- Liquidación de extraordinarios por socio (pago separado, mismo criterio de resto).
 CREATE VIEW v_extraordinarios_por_socio AS
 WITH tot AS (
     SELECT periodo_id, SUM(monto_mxn) AS total FROM extraordinarios GROUP BY periodo_id
@@ -286,7 +260,6 @@ SELECT tot.periodo_id,
 FROM tot
 CROSS JOIN socios so;
 
--- Caja chica: movimientos (gastos y abonos) por número de caja.
 CREATE TABLE IF NOT EXISTS caja_chica (
   id            SERIAL PRIMARY KEY,
   fecha         DATE          NOT NULL,
@@ -302,7 +275,6 @@ CREATE TABLE IF NOT EXISTS caja_chica (
 );
 CREATE INDEX IF NOT EXISTS idx_caja_chica_fecha ON caja_chica(fecha);
 
--- Insumos: gastos de consumibles asignados a un viaje (se suman a viajes.costo_consumibles).
 CREATE TABLE IF NOT EXISTS insumos (
   id                SERIAL PRIMARY KEY,
   periodo_id        INT           REFERENCES periodos(id) ON DELETE CASCADE,
@@ -321,12 +293,6 @@ CREATE TABLE IF NOT EXISTS insumos (
 CREATE INDEX IF NOT EXISTS idx_insumos_periodo ON insumos(periodo_id);
 CREATE INDEX IF NOT EXISTS idx_insumos_viaje   ON insumos(viaje_id);
 
--- Cargos recurrentes: clave única para no duplicar nómina/administrativo.
-ALTER TABLE gastos_operativos ADD COLUMN IF NOT EXISTS clave_recurrente TEXT;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_operativos_clave_recurrente
-  ON gastos_operativos(clave_recurrente) WHERE clave_recurrente IS NOT NULL;
-
--- Adjuntos (PDF de respaldo) por gasto operativo.
 CREATE TABLE IF NOT EXISTS adjuntos (
   id         SERIAL PRIMARY KEY,
   gasto_id   INT           REFERENCES gastos_operativos(id) ON DELETE CASCADE,
@@ -335,12 +301,17 @@ CREATE TABLE IF NOT EXISTS adjuntos (
   mime       TEXT          NOT NULL DEFAULT 'application/pdf',
   datos      TEXT          NOT NULL,
   generado   BOOLEAN       NOT NULL DEFAULT FALSE,
+  periodo_id INT           REFERENCES periodos(id) ON DELETE CASCADE,
+  extraordinario_id INT     REFERENCES extraordinarios(id) ON DELETE CASCADE,
+  caja_id    INT           REFERENCES caja_chica(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ   NOT NULL DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS idx_adjuntos_gasto ON adjuntos(gasto_id);
-CREATE INDEX IF NOT EXISTS idx_adjuntos_insumo ON adjuntos(insumo_id);
+CREATE INDEX IF NOT EXISTS idx_adjuntos_gasto      ON adjuntos(gasto_id);
+CREATE INDEX IF NOT EXISTS idx_adjuntos_insumo     ON adjuntos(insumo_id);
+CREATE INDEX IF NOT EXISTS idx_adjuntos_periodo    ON adjuntos(periodo_id);
+CREATE INDEX IF NOT EXISTS idx_adjuntos_extra      ON adjuntos(extraordinario_id);
+CREATE INDEX IF NOT EXISTS idx_adjuntos_caja       ON adjuntos(caja_id);
 
--- Abonos de cada socio a la cuenta de extraordinarios.
 CREATE TABLE IF NOT EXISTS abonos_extraordinarios (
   id         SERIAL PRIMARY KEY,
   periodo_id INT           NOT NULL REFERENCES periodos(id) ON DELETE CASCADE,
@@ -354,7 +325,6 @@ CREATE TABLE IF NOT EXISTS abonos_extraordinarios (
 CREATE INDEX IF NOT EXISTS idx_abonos_extra_periodo ON abonos_extraordinarios(periodo_id);
 CREATE INDEX IF NOT EXISTS idx_abonos_extra_socio   ON abonos_extraordinarios(socio_id);
 
--- Catálogo de marineros.
 CREATE TABLE IF NOT EXISTS marineros (
   id         SERIAL PRIMARY KEY,
   nombre     TEXT        NOT NULL,
@@ -363,15 +333,6 @@ CREATE TABLE IF NOT EXISTS marineros (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_marineros_nombre ON marineros (lower(btrim(nombre)));
 
--- Los adjuntos pueden pertenecer a un periodo (estado de cuenta archivado).
-ALTER TABLE adjuntos ADD COLUMN IF NOT EXISTS periodo_id INT REFERENCES periodos(id) ON DELETE CASCADE;
-CREATE INDEX IF NOT EXISTS idx_adjuntos_periodo ON adjuntos(periodo_id);
-ALTER TABLE adjuntos ADD COLUMN IF NOT EXISTS extraordinario_id INT REFERENCES extraordinarios(id) ON DELETE CASCADE;
-CREATE INDEX IF NOT EXISTS idx_adjuntos_extra ON adjuntos(extraordinario_id);
-ALTER TABLE adjuntos ADD COLUMN IF NOT EXISTS caja_id INT REFERENCES caja_chica(id) ON DELETE CASCADE;
-CREATE INDEX IF NOT EXISTS idx_adjuntos_caja ON adjuntos(caja_id);
-
--- Auditoría: quién hizo qué y cuándo.
 CREATE TABLE IF NOT EXISTS auditoria (
   id             SERIAL PRIMARY KEY,
   usuario_id     INT,
@@ -382,6 +343,6 @@ CREATE TABLE IF NOT EXISTS auditoria (
   detalle        TEXT,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS idx_auditoria_fecha ON auditoria(created_at desc);
+CREATE INDEX IF NOT EXISTS idx_auditoria_fecha ON auditoria(created_at DESC);
 
 COMMIT;
