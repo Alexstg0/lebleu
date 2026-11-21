@@ -3,6 +3,13 @@
 Estado: **borrador para decidir**, nada de esto está programado. Está hecho leyendo el código
 de Le Bleu (este repo) y las convenciones de SICTEGRA (repo `mye`).
 
+## 0. Por qué se migra
+
+Hoy Lebleu depende de terceros (Vercel para la app, Supabase para la base). El objetivo es
+**centralizar todo en el servidor propio de Solmex** y que ningún dato viva en servicios
+externos. Consecuencias: al terminar el corte se da de baja Vercel y Supabase (tras el periodo de
+respaldo de la sección 9), y el respaldo de la base pasa a ser responsabilidad propia.
+
 ## 1. Qué hay que mover (medido, no estimado)
 
 | Pieza | Hoy | Tamaño |
@@ -86,10 +93,10 @@ Reglas (se vuelven prueba automática, no buena intención):
 ## 5. Contraseñas (decisión necesaria)
 
 Hoy: `scrypt` de Node, formato `salt:hash`. PHP no trae ese scrypt compatible. Opciones:
-- **A (recomendada):** son pocos usuarios; se restablecen y se guardan con `password_hash`
-  (Argon2id/bcrypt). Cero código legado.
-- B: portar un verificador scrypt en PHP puro solo para el primer ingreso y re-hashear. Más
-  código, más superficie.
+- **A (DECIDIDA por Alex):** se restablecen todas las contraseñas y se guardan con
+  `password_hash` (Argon2id/bcrypt). Cero código legado. Al cortar, cada usuario recibe una
+  contraseña temporal y la cambia en su primer ingreso.
+- ~~B: portar un verificador scrypt en PHP puro.~~ Descartada.
 
 ## 6. Interfaz: idéntica de verdad
 
@@ -132,7 +139,7 @@ Una semana de 10 h/día solo alcanza si nada sale mal. Con las pruebas de parida
 
 ## 10. Decisiones que necesito de Alex antes de programar
 
-1. ¿Contraseñas: restablecer (A) o portar scrypt (B)?
+1. ~~Contraseñas~~: resuelto, se restablecen.
 2. ¿Misma instancia Windows/IIS de SICTEGRA, con su propio sitio y grupo de aplicaciones?
 3. ¿Versión exacta de MySQL ("8.5" no es una versión que yo pueda confirmar)? Define si hay `CHECK`.
 4. ¿Se hace en este repo (carpeta `php/` en una rama) o en repo nuevo?
