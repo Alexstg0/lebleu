@@ -1,6 +1,6 @@
 # Plan de migración de Le Bleu a PHP + MySQL 8 (enero)
 
-Estado: **borrador para decidir**, nada de esto está programado. Está hecho leyendo el código
+Estado: **plan aprobado por Alex; arranca el lunes**. Hasta ahora no hay código PHP. Está hecho leyendo el código
 de Le Bleu (este repo) y las convenciones de SICTEGRA (repo `mye`).
 
 ## 0. Por qué se migra
@@ -137,11 +137,37 @@ Una semana de 10 h/día solo alcanza si nada sale mal. Con las pruebas de parida
 3. Cambiar el registro DNS de `app.lebleu.mx`. Vercel/Supabase se quedan 2 semanas de respaldo.
 4. Respaldo diario de MySQL (hoy lo da Supabase; en el servidor propio hay que programarlo).
 
+## 9b. Respaldos (Alex se encarga; se programan desde el día 1)
+
+- Script `.bat` con `mysqldump --single-transaction --routines --triggers`, usuario de solo
+  lectura y credenciales en un archivo de opciones (`--defaults-extra-file`), nunca en la línea
+  de comandos ni en el repo.
+- Archivo con fecha (`lebleu_AAAA-MM-DD_HHMM.sql`), comprimido; se borran los de más de N días
+  (retención por definir, sugiero 14 diarios + 1 mensual).
+- Se ejecuta con el **Programador de tareas de Windows**, a diario, fuera del horario de captura.
+- Segunda capa: copia a otro disco/ubicación y, si se quiere, instantánea automática de
+  Lightsail. Un respaldo en el mismo disco no cuenta como respaldo.
+- **Ensayo de restauración** al terminar la fase 1 y una vez al mes: un respaldo que nunca se
+  restauró no está probado.
+
 ## 10. Decisiones que necesito de Alex antes de programar
 
+Resueltas: contraseñas se restablecen; Alex se hace cargo de la infraestructura y de los
+respaldos automáticos (`.bat` + Programador de tareas); arranque el lunes.
+
+Pendientes (se contestan el lunes, no bloquean la fase 0):
 1. ~~Contraseñas~~: resuelto, se restablecen.
 2. ¿Misma instancia Windows/IIS de SICTEGRA, con su propio sitio y grupo de aplicaciones?
 3. ¿Versión exacta de MySQL ("8.5" no es una versión que yo pueda confirmar)? Define si hay `CHECK`.
 4. ¿Se hace en este repo (carpeta `php/` en una rama) o en repo nuevo?
 5. ¿Quién respalda la base y con qué frecuencia?
 6. ¿Se corta en enero con un periodo cerrado, o a mitad de periodo?
+
+## 11. Lunes: arranque
+
+1. Confirmar versión exacta de MySQL (`SELECT VERSION();` en Workbench) y que XAMPP local use la misma.
+2. Decidir ubicación del código (pregunta 4 de arriba) y crear la rama/carpeta.
+3. Fase 0 y 1: esqueleto modular (Router, Db, Sesión, Auth), esquema MySQL, importar datos de
+   `db/datos_20260826.sql` convertidos y validar conteos y sumas por periodo contra Postgres.
+4. Dejar listo el `.bat` de respaldo y ensayar una restauración.
+5. Crear `pruebas/tamano_de_archivos.php` (tope 300/400 líneas) desde el primer commit.

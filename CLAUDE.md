@@ -94,3 +94,10 @@ sin multi-tenant.
 | Cambiar un PDF generado | `lib/recibo.ts` (helpers) + el `lib/reporte-*.ts` correspondiente |
 | Tocar cargos automáticos (nómina, admin) | `lib/recurrentes.ts`, `app/api/cron/recurrentes/route.ts`, `vercel.json` |
 | Abrir/cerrar un periodo o el arrastre de saldo | `lib/periodos.ts` |
+
+## Migración a PHP + MySQL 8 (en curso)
+
+Lebleu se está moviendo de Vercel + Supabase al servidor propio de Solmex (Windows/IIS, PHP,
+MySQL 8), con la misma interfaz y arquitectura modular. Plan, decisiones, riesgos y fases en
+[`docs/MIGRACION-PHP.md`](docs/MIGRACION-PHP.md). Este código Next.js sigue siendo la referencia
+funcional hasta el corte.
