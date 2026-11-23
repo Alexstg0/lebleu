@@ -53,17 +53,38 @@ final class Db
         return (int) self::pdo()->lastInsertId();
     }
 
+    private static int $nivel = 0;
+
+    // Transacción con anidamiento (los niveles internos usan SAVEPOINT).
     public static function transaccion(callable $fn): mixed
     {
         $pdo = self::pdo();
-        $pdo->beginTransaction();
+        $punto = 'sp' . self::$nivel;
+        self::$nivel === 0 ? $pdo->beginTransaction() : $pdo->exec("SAVEPOINT $punto");
+        self::$nivel++;
         try {
             $r = $fn();
-            $pdo->commit();
+            self::$nivel--;
+            self::$nivel === 0 ? $pdo->commit() : $pdo->exec("RELEASE SAVEPOINT $punto");
             return $r;
         } catch (\Throwable $e) {
-            $pdo->rollBack();
+            self::$nivel--;
+            self::$nivel === 0 ? $pdo->rollBack() : $pdo->exec("ROLLBACK TO SAVEPOINT $punto");
             throw $e;
+        }
+    }
+
+    // Para pruebas: ejecuta $fn dentro de una transacción que SIEMPRE se revierte.
+    public static function simular(callable $fn): mixed
+    {
+        $pdo = self::pdo();
+        $pdo->beginTransaction();
+        self::$nivel++;
+        try {
+            return $fn();
+        } finally {
+            self::$nivel--;
+            $pdo->rollBack();
         }
     }
 

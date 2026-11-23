@@ -21,13 +21,6 @@ final class Politicas
         return ($u && in_array($u['rol'], $roles, true)) ? $u : null;
     }
 
-    public static function respuestaDenegada(Peticion $p): Respuesta
-    {
-        return self::usuarioActual($p)
-            ? Respuesta::error('No tienes permiso para esto.', 403)
-            : Respuesta::error('Sesión requerida.', 401);
-    }
-
     /** Para páginas: usuario o respuesta de redirección. @return array{0: ?array, 1: ?Respuesta} */
     public static function requerirUsuario(Peticion $p, ?array $roles = null): array
     {
