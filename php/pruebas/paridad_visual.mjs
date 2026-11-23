@@ -1,0 +1,51 @@
+// Captura las mismas pantallas en la app original (Next.js) y en la versión PHP, con los mismos datos.
+// Uso: NEXT_URL=http://127.0.0.1:3000 PHP_URL=http://127.0.0.1:8099 SALIDA=/ruta/capturas \
+//      PRUEBA_EMAIL=... PRUEBA_CLAVE=... node pruebas/paridad_visual.mjs
+// Luego: python3 pruebas/comparar_capturas.py /ruta/capturas
+import { createRequire } from 'node:module';
+import fs from 'node:fs';
+const { chromium } = createRequire(import.meta.url)('playwright');
+
+const apps = { next: process.env.NEXT_URL, php: process.env.PHP_URL };
+const salida = process.env.SALIDA || './capturas';
+const email = process.env.PRUEBA_EMAIL, clave = process.env.PRUEBA_CLAVE;
+fs.mkdirSync(salida, { recursive: true });
+
+const vistas = { escritorio: { width: 1366, height: 900 }, movil: { width: 390, height: 844 } };
+const paginas = [
+  ['dashboard', '/'], ['dashboard_periodo4', '/?periodo=4'], ['periodos', '/periodos'],
+];
+
+const navegador = await chromium.launch();
+for (const [vista, tam] of Object.entries(vistas)) {
+  for (const [app, base] of Object.entries(apps)) {
+    // Sin sesión: pantalla de login.
+    let ctx = await navegador.newContext({ viewport: tam });
+    let pag = await ctx.newPage();
+    await pag.goto(base + '/login', { waitUntil: 'networkidle' });
+    await pag.screenshot({ path: `${salida}/${app}__login__${vista}.png`, fullPage: true });
+    await ctx.close();
+
+    // Con sesión de administrador.
+    ctx = await navegador.newContext({ viewport: tam });
+    const r = await ctx.request.post(base + '/api/login', { data: { email, password: clave } });
+    if (!(await r.json()).ok) throw new Error(`login falló en ${app}`);
+    pag = await ctx.newPage();
+    for (const [nombre, ruta] of paginas) {
+      await pag.goto(base + ruta, { waitUntil: 'networkidle' });
+      await pag.screenshot({ path: `${salida}/${app}__${nombre}__${vista}.png`, fullPage: true });
+    }
+    await pag.goto(base + '/', { waitUntil: 'networkidle' });
+    if (vista === 'escritorio') {
+      await pag.click('text=Administración');
+      await pag.screenshot({ path: `${salida}/${app}__menu_admin__${vista}.png` });
+    } else {
+      await pag.click('.topbar-burger');
+      await pag.waitForTimeout(500);
+      await pag.screenshot({ path: `${salida}/${app}__menu_lateral__${vista}.png` });
+    }
+    await ctx.close();
+  }
+}
+await navegador.close();
+console.log('capturas en', salida);

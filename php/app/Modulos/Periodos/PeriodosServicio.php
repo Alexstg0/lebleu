@@ -14,6 +14,33 @@ final class PeriodosServicio
         $this->archivador ??= new SinArchivo();
     }
 
+    public function listar(): array
+    {
+        return $this->repo->listar();
+    }
+
+    /** Datos de la pantalla de Periodos: cada periodo con su balance y su archivo, y el mes sugerido. */
+    public function resumen(): array
+    {
+        $periodos = $this->repo->listar();
+        $balances = $this->repo->balancePorPeriodo();
+        $archivos = $this->repo->archivoPorPeriodo();
+        $ultimo = $periodos[0] ?? null;
+        $mes = (int) ($ultimo['mes'] ?? 0) + 1;
+        $anio = (int) ($ultimo['anio'] ?? date('Y'));
+        if ($mes > 12) {
+            [$mes, $anio] = [1, $anio + 1];
+        }
+        return [
+            'periodos' => array_map(fn($p) => $p + [
+                'balance' => $balances[$p['id']] ?? '0',
+                'archivo_id' => $archivos[$p['id']] ?? null,
+            ], $periodos),
+            'ultimo' => $ultimo,
+            'sugerido' => ['anio' => $anio, 'mes' => $mes],
+        ];
+    }
+
     /** Crea el periodo, arrastra el saldo de cada socio y cierra el periodo anterior. Devuelve el id nuevo. */
     public function crear(array $d): int
     {

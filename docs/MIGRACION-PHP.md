@@ -193,4 +193,25 @@ Pendientes (se contestan el lunes, no bloquean la fase 0):
 `db/datos_20260826.sql`. Conviene borrar el `_clean`.
 
 Probado en MariaDB 10.11 y PHP 8.3; falta confirmarlo en el MySQL 8 y el PHP del servidor.
-Siguiente: fase 2 (estado de cuenta + periodos, con la misma prueba de cuadre).
+
+**Fase 2 hecha** (estado de cuenta, periodos, login y sus pantallas):
+- Módulos `Periodos` (crear con arrastre de saldos, cerrar, reabrir, bloqueo de periodos cerrados), `EstadoCuenta`,
+  `Auditoria`, y los endpoints que esas pantallas necesitan (`/api/adjuntos/{id}`, `/api/manual`,
+  `/api/extraordinarios/pagado`). Aritmética de dinero en centavos exactos (`Dinero`).
+- **El estado de cuenta de los 4 periodos coincide con la lógica original** (`lib/queries.ts` ejecutado sobre Postgres):
+  balances, reparto de extraordinarios, viajes con horómetros y KPIs.
+- **Visualmente casi idéntico:** `globals.css` se copió sin cambios. Comparando capturas de ambas apps (escritorio y móvil,
+  login, estado de cuenta, periodos, menú desplegable y menú lateral) difieren 0.02 %–0.3 % de los píxeles y miden lo mismo; lo que
+  queda es suavizado de texto y el indicador de desarrollo de Next.js. Prueba de interfaz con navegador real: 14/14.
+- Regla de capas automática (`pruebas/capas.php`): ya cazó una violación propia durante el desarrollo.
+
+**Desviaciones y pendientes conocidos**
+- **Error del original (no replicado):** el tablero calcula "50% c/u" con flotantes y en totales de centavos nones queda un
+  centavo abajo (periodo julio: muestra $33,754.46, pero el socio 1 realmente paga $33,754.47 según la vista). PHP calcula exacto.
+  La prueba lo marca como NOTA y no como fallo.
+- Al cerrar un periodo todavía **no se archiva el PDF** del estado de cuenta (llega con Reportes, fase 5); la pantalla lo avisa
+  igual que cuando falla en el original. El código ya tiene el punto de enganche (`ArchivadorEstado`).
+- Un capitán que inicia sesión es enviado a `/calendario`, que se porta en la fase 4.
+- "Recordarme" del login no hace nada, igual que en el original.
+
+Siguiente: fase 3 (módulos de captura: gastos, extraordinarios, insumos, renta, aportaciones, viajes).

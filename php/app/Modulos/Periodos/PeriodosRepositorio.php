@@ -11,6 +11,20 @@ final class PeriodosRepositorio
         return Db::filas(self::SELECT_CON_EMBARCACION . ' ORDER BY p.anio DESC, p.mes DESC');
     }
 
+    /** @return array<int, string> periodo_id => suma del balance operativo de ambos socios */
+    public function balancePorPeriodo(): array
+    {
+        return array_column(Db::filas('SELECT periodo_id, SUM(balance_operativo) AS total FROM v_balance_operativo GROUP BY periodo_id'), 'total', 'periodo_id');
+    }
+
+    /** @return array<int, int> periodo_id => id del estado de cuenta archivado más reciente */
+    public function archivoPorPeriodo(): array
+    {
+        return array_map('intval', array_column(Db::filas(
+            'SELECT periodo_id, MAX(id) AS id FROM adjuntos WHERE periodo_id IS NOT NULL AND generado = 1 GROUP BY periodo_id'
+        ), 'id', 'periodo_id'));
+    }
+
     public function porId(int $id): ?array
     {
         return Db::fila(self::SELECT_CON_EMBARCACION . ' WHERE p.id = ?', [$id]);
