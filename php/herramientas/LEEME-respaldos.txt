@@ -1,0 +1,31 @@
+RESPALDOS DE LE BLEU
+====================
+
+1) Crear el usuario de solo lectura (en MySQL Workbench):
+     CREATE USER 'lebleu_respaldo'@'localhost' IDENTIFIED BY 'UNA-CLAVE-LARGA';
+     GRANT SELECT, LOCK TABLES, SHOW VIEW, TRIGGER, EVENT ON lebleu.* TO 'lebleu_respaldo'@'localhost';
+
+2) Crear C:\lebleu_respaldos\mysql.cnf con este contenido (y quitarle permisos a otros usuarios de Windows):
+     [client]
+     user=lebleu_respaldo
+     password=UNA-CLAVE-LARGA
+
+3) Editar la ruta de mysqldump dentro de respaldo_lebleu.bat si MySQL está en otra carpeta.
+
+4) Probar a mano: doble clic en respaldo_lebleu.bat y revisar que aparezca
+   C:\lebleu_respaldos\lebleu_AAAA-MM-DD_HHMM.sql.zip y una línea "OK" en respaldo.log.
+
+5) Programar a diario (Programador de tareas de Windows):
+     Acción: Iniciar un programa -> C:\...\herramientas\respaldo_lebleu.bat
+     Desencadenador: diario, fuera del horario de captura (ej. 03:00).
+     Marcar "Ejecutar tanto si el usuario inicia sesión como si no".
+
+6) SEGUNDA COPIA: un respaldo en el mismo disco no cuenta. Copiar C:\lebleu_respaldos a otro disco
+   o ubicación, y activar las instantáneas automáticas de Lightsail.
+
+7) ENSAYO DE RESTAURACIÓN (obligatorio, y una vez al mes):
+     - descomprimir un .sql.zip
+     - mysql -u root -p -e "CREATE DATABASE lebleu_prueba CHARACTER SET utf8mb4"
+     - mysql -u root -p lebleu_prueba < lebleu_AAAA-MM-DD_HHMM.sql
+     - comprobar con:  SELECT COUNT(*) FROM periodos;   y   SELECT * FROM v_balance_operativo;
+   Un respaldo que nunca se restauró no está probado.

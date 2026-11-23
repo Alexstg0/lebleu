@@ -171,3 +171,26 @@ Pendientes (se contestan el lunes, no bloquean la fase 0):
    `db/datos_20260826.sql` convertidos y validar conteos y sumas por periodo contra Postgres.
 4. Dejar listo el `.bat` de respaldo y ensayar una restauración.
 5. Crear `pruebas/tamano_de_archivos.php` (tope 300/400 líneas) desde el primer commit.
+
+## 12. Avance
+
+**Fase 0 y 1 hechas** (código en `php/`, decisión provisional: carpeta `php/` de este repo):
+- Núcleo modular (Ruteador, Petición/Respuesta, Db con PDO preparado, Config) y módulo **Auth**
+  completo (login con límite de 8 intentos/10 min y respuesta igual para usuario inexistente,
+  sesiones de 30 días, logout, guardias por rol), probado de punta a punta.
+- Esquema MySQL consolidado (25 tablas, 3 vistas, columnas generadas y `CHECK`), portable a
+  MySQL 8 y MariaDB; migrador re-ejecutable.
+- Importador del respaldo con conversión de fechas (America/Mazatlan), booleanos y verificación de
+  alineación; 730 filas cargadas.
+- **Prueba de cuadre contra Postgres: 40 de 40 comparaciones iguales** (conteos, fechas, sumas de
+  montos por periodo, y las tres vistas del estado de cuenta).
+- `.bat` de respaldo con instrucciones. El ensayo de restauración (dump y carga en otra base) encontró
+  que las vistas dependían del usuario que las creó (`DEFINER`); se pasaron a `SQL SECURITY INVOKER`
+  y la base restaurada da exactamente los mismos totales.
+
+**Hallazgo:** `db/datos_20260826_clean.sql` está corrupto (en `viajes`, `gastos_operativos`,
+`extraordinarios`, `insumos` y `viaje_horometros` hay más valores que columnas). El bueno es
+`db/datos_20260826.sql`. Conviene borrar el `_clean`.
+
+Probado en MariaDB 10.11 y PHP 8.3; falta confirmarlo en el MySQL 8 y el PHP del servidor.
+Siguiente: fase 2 (estado de cuenta + periodos, con la misma prueba de cuadre).
