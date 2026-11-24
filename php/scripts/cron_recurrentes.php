@@ -4,9 +4,8 @@
 // Uso:  php scripts/cron_recurrentes.php        (ver herramientas/LEEME-tarea-programada.txt)
 require __DIR__ . '/../app/arranque.php';
 
+use Lebleu\Servicios;
 use Lebleu\Modulos\Auditoria\AuditoriaServicio;
-use Lebleu\Modulos\Periodos\PeriodosServicio;
-use Lebleu\Modulos\Recurrentes\RecurrentesServicio;
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(404);
@@ -14,12 +13,12 @@ if (PHP_SAPI !== 'cli') {
 }
 try {
     $hoy = date('Y-m-d'); // hora de la embarcación (zona_horaria de config)
-    $periodos = new PeriodosServicio();
+    $periodos = Servicios::periodos();
     $nuevo = $periodos->asegurarPeriodoActual($hoy);
     if ($nuevo) {
         AuditoriaServicio::registrar(null, 'crear', 'periodos', $nuevo, 'El sistema creó automáticamente el periodo del mes ' . substr($hoy, 0, 7));
     }
-    $servicio = new RecurrentesServicio();
+    $servicio = Servicios::recurrentes();
     $nomina = $admin = 0;
     foreach ($periodos->listar() as $periodo) {
         if ($periodo['estado'] === 'cerrado') {

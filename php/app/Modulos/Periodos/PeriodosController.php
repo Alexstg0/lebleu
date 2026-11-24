@@ -1,6 +1,7 @@
 <?php
 namespace Lebleu\Modulos\Periodos;
 
+use Lebleu\Servicios;
 use Lebleu\Compartido\Politicas;
 use Lebleu\Modulos\Auditoria\AuditoriaServicio;
 use Lebleu\Core\Peticion;
@@ -16,7 +17,7 @@ final class PeriodosController
         }
         try {
             $d = $p->json();
-            $id = (new PeriodosServicio())->crear($d);
+            $id = Servicios::periodos()->crear($d);
             AuditoriaServicio::registrar($usuario, 'crear', 'periodos', $id, "Creó el periodo {$d['mes']}/{$d['anio']}");
             return Respuesta::json(['ok' => true, 'id' => $id]);
         } catch (\InvalidArgumentException $e) {
@@ -40,7 +41,7 @@ final class PeriodosController
             if (!$id) {
                 return Respuesta::error('Falta el periodo.', 400);
             }
-            $servicio = new PeriodosServicio();
+            $servicio = Servicios::periodos();
             $etiqueta = $servicio->etiqueta($id);
             if ($etiqueta === null) {
                 return Respuesta::error('Periodo no encontrado.', 404);

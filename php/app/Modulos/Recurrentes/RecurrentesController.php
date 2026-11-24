@@ -1,6 +1,7 @@
 <?php
 namespace Lebleu\Modulos\Recurrentes;
 
+use Lebleu\Servicios;
 use Lebleu\Compartido\Politicas;
 use Lebleu\Core\Peticion;
 use Lebleu\Core\Respuesta;
@@ -20,7 +21,7 @@ final class RecurrentesController
             if ($pedido) {
                 $periodos = array_values(array_filter($periodos, fn($x) => (int) $x['id'] === $pedido));
             }
-            $servicio = new RecurrentesServicio();
+            $servicio = Servicios::recurrentes();
             $nomina = $admin = 0;
             foreach ($periodos as $periodo) {
                 $r = $servicio->asegurar($periodo, date('Y-m-d'));
