@@ -74,5 +74,6 @@ foreach (array_slice($dif, 0, 40) as $d) {
     echo "DIFIERE $d\n";
 }
 $periodos = count($ref['estados'] ?? []);
-echo $dif ? "\n" . count($dif) . " diferencia(s) en $periodos periodos.\n" : "Idéntico: $periodos estados de cuenta completos coinciden con la versión original.\n";
+$sujeto = $periodos ? "$periodos estados de cuenta completos" : 'los datos comparados';
+echo $dif ? "\n" . count($dif) . " diferencia(s)" . ($periodos ? " en $periodos periodos" : '') . ".\n" : "Idéntico: $sujeto coinciden con la versión original.\n";
 exit($dif ? 1 : 0);

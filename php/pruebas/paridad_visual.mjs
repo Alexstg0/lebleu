@@ -14,6 +14,8 @@ fs.mkdirSync(salida, { recursive: true });
 const vistas = { escritorio: { width: 1366, height: 900 }, movil: { width: 390, height: 844 } };
 const paginas = [
   ['dashboard', '/'], ['dashboard_periodo4', '/?periodo=4'], ['periodos', '/periodos'],
+  ['calendario_ago', '/calendario?y=2026&m=8'], ['calendario_sep', '/calendario?y=2026&m=9'],
+  ['usuarios', '/usuarios'], ['auditoria', '/auditoria'], ['caja_chica', '/caja-chica'],
 ];
 // Pestañas de Capturar (administrador) y pantallas de Movimientos.
 const pestanas = ['Viaje', 'Gasto operativo', 'Insumos', 'Aportación', 'Extraordinario', 'Abono extraord.', 'Renta'];
@@ -46,6 +48,19 @@ for (const [vista, tam] of Object.entries(vistas)) {
     }
     await pag.goto(base + '/movimientos', { waitUntil: 'networkidle' });
     await pag.screenshot({ path: `${salida}/${app}__movimientos__${vista}.png`, fullPage: true });
+    // Calendario con la ventana de reserva abierta y caja chica filtrada / con ventana de movimiento.
+    await pag.goto(base + '/calendario?y=2026&m=8', { waitUntil: 'networkidle' });
+    await pag.locator('.cal-chip, .ical-item').first().click().catch(() => {});
+    if (vista === 'movil') { await pag.locator('.ical-day:not(.empty)').nth(6).click(); await pag.locator('.ical-item').first().click(); }
+    await pag.waitForTimeout(400);
+    await pag.screenshot({ path: `${salida}/${app}__calendario_modal__${vista}.png` });
+    await pag.goto(base + '/caja-chica', { waitUntil: 'networkidle' });
+    await pag.locator('.cc-pill').nth(1).click();
+    await pag.mouse.move(0, 0); await pag.waitForTimeout(400);
+    await pag.screenshot({ path: `${salida}/${app}__caja_chica_filtrada__${vista}.png`, fullPage: true });
+    await pag.getByRole('button', { name: '+ Movimiento' }).click();
+    await pag.waitForTimeout(400);
+    await pag.screenshot({ path: `${salida}/${app}__caja_chica_modal__${vista}.png` });
     await pag.goto(base + '/', { waitUntil: 'networkidle' });
     if (vista === 'escritorio') {
       await pag.click('text=Administración');

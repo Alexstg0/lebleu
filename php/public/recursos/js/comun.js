@@ -29,7 +29,12 @@
     return fetch(window.location.href, { credentials: 'same-origin' })
       .then(function (r) { return r.text(); })
       .then(function (html) {
-        var nuevo = new DOMParser().parseFromString(html, 'text/html').getElementById('datos-viajes');
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        document.querySelectorAll('[data-refrescable]').forEach(function (zona) {
+          var nueva = doc.querySelector('[data-refrescable="' + zona.getAttribute('data-refrescable') + '"]');
+          if (nueva) zona.innerHTML = nueva.innerHTML;
+        });
+        var nuevo = doc.getElementById('datos-viajes');
         var actual = document.getElementById('datos-viajes');
         if (nuevo && actual) {
           actual.textContent = nuevo.textContent;

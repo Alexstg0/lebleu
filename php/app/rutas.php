@@ -3,9 +3,12 @@
 use Lebleu\Compartido\SaludController;
 use Lebleu\Core\Ruteador;
 use Lebleu\Modulos\Adjuntos\AdjuntosController;
+use Lebleu\Modulos\Auditoria\AuditoriaPaginaController;
 use Lebleu\Modulos\Auth\AuthController;
 use Lebleu\Modulos\Auth\AuthPaginaController;
 use Lebleu\Modulos\Captura\CapturaController;
+use Lebleu\Modulos\CajaChica\CajaChicaController;
+use Lebleu\Modulos\CajaChica\CajaChicaPaginaController;
 use Lebleu\Modulos\EstadoCuenta\EstadoCuentaController;
 use Lebleu\Modulos\Aportaciones\AportacionesController;
 use Lebleu\Modulos\Extraordinarios\AbonosController;
@@ -17,7 +20,12 @@ use Lebleu\Modulos\Marineros\MarinerosController;
 use Lebleu\Modulos\Manuales\ManualesController;
 use Lebleu\Modulos\Movimientos\MovimientosController;
 use Lebleu\Modulos\Periodos\PeriodosController;
+use Lebleu\Modulos\Recurrentes\RecurrentesController;
+use Lebleu\Modulos\Reservas\CalendarioController;
+use Lebleu\Modulos\Reservas\ReservasController;
 use Lebleu\Modulos\Periodos\PeriodosPaginaController;
+use Lebleu\Modulos\Usuarios\UsuariosController;
+use Lebleu\Modulos\Usuarios\UsuariosPaginaController;
 use Lebleu\Modulos\Viajes\ViajesController;
 
 return function (Ruteador $r): void {
@@ -25,7 +33,11 @@ return function (Ruteador $r): void {
     $r->agregar('GET', '/login', [AuthPaginaController::class, 'login']);
     $r->agregar('GET', '/', [EstadoCuentaController::class, 'pagina']);
     $r->agregar('GET', '/periodos', [PeriodosPaginaController::class, 'pagina']);
+    $r->agregar('GET', '/calendario', [CalendarioController::class, 'pagina']);
     $r->agregar('GET', '/capturar', [CapturaController::class, 'pagina']);
+    $r->agregar('GET', '/usuarios', [UsuariosPaginaController::class, 'pagina']);
+    $r->agregar('GET', '/auditoria', [AuditoriaPaginaController::class, 'pagina']);
+    $r->agregar('GET', '/caja-chica', [CajaChicaPaginaController::class, 'pagina']);
     $r->agregar('GET', '/movimientos', [MovimientosController::class, 'pagina']);
     $r->agregar('GET', '/movimientos/formulario', [MovimientosController::class, 'formulario']);
 
@@ -37,6 +49,10 @@ return function (Ruteador $r): void {
     $r->agregar('POST', '/api/periodos/estado', [PeriodosController::class, 'estado']);
     $r->agregar('POST', '/api/extraordinarios/pagado', [ExtraordinariosController::class, 'pagado']);
     $r->agregar('POST', '/api/marineros', [MarinerosController::class, 'crear']);
+    $r->agregar('POST', '/api/recurrentes', [RecurrentesController::class, 'generar']);
+    $r->agregar('POST', '/api/usuarios', [UsuariosController::class, 'crear']);
+    $r->agregar('PATCH', '/api/usuarios', [UsuariosController::class, 'editar']);
+    $r->agregar('DELETE', '/api/usuarios', [UsuariosController::class, 'borrar']);
 
     // Captura de movimientos: alta (POST), edición (PATCH) y baja (DELETE ?id=)
     foreach ([
@@ -47,11 +63,15 @@ return function (Ruteador $r): void {
         '/api/ingresos-renta' => IngresosRentaController::class,
         '/api/insumos' => InsumosController::class,
         '/api/viajes' => ViajesController::class,
+        '/api/reservas' => ReservasController::class,
+        '/api/caja-chica' => CajaChicaController::class,
     ] as $ruta => $controlador) {
         $r->agregar('POST', $ruta, [$controlador, 'crear']);
         $r->agregar('PATCH', $ruta, [$controlador, 'editar']);
         $r->agregar('DELETE', $ruta, [$controlador, 'borrar']);
     }
     $r->agregar('GET', '/api/adjuntos/{id}', [AdjuntosController::class, 'ver']);
+    $r->agregar('POST', '/api/adjuntos', [AdjuntosController::class, 'subir']);
+    $r->agregar('DELETE', '/api/adjuntos', [AdjuntosController::class, 'borrar']);
     $r->agregar('GET', '/api/manual', [ManualesController::class, 'ver']);
 };

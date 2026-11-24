@@ -24,7 +24,7 @@
   document.addEventListener('click', function (e) {
     var boton = e.target.closest('[data-visor-pdf]');
     if (boton) {
-      abrir(boton.getAttribute('data-visor-pdf'), boton.getAttribute('data-titulo') || 'Reporte', false);
+      abrir(boton.getAttribute('data-visor-pdf'), boton.getAttribute('data-titulo') || 'Reporte', boton.hasAttribute('data-solo-documento'));
       return;
     }
     var fila = e.target.closest('tr[data-pdf]');

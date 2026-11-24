@@ -21,4 +21,14 @@ final class AuditoriaServicio
             error_log('auditoria error: ' . $e->getMessage());
         }
     }
+
+    /** Últimos movimientos con la hora ya en la zona de la embarcación (Baja California Sur). */
+    public static function ultimos(int $limite = 300): array
+    {
+        $zona = new \DateTimeZone('America/Mazatlan');
+        return array_map(function ($f) use ($zona) {
+            $cuando = (new \DateTimeImmutable($f['created_at'], new \DateTimeZone('UTC')))->setTimezone($zona)->format('d/m/Y H:i');
+            return $f + ['cuando' => $cuando];
+        }, (new AuditoriaRepositorio())->ultimos($limite));
+    }
 }

@@ -12,6 +12,9 @@ Reemplazo de la app Next.js (ver `../docs/MIGRACION-PHP.md`). Misma funcionalida
 
 En IIS el sitio apunta a `public/` (lleva su `web.config`; requiere URL Rewrite).
 
+## Tarea diaria
+`scripts/cron_recurrentes.php` (crea el periodo del mes y genera nómina y cargo administrativo). Se programa con el Programador de tareas de Windows: ver `herramientas/LEEME-tarea-programada.txt`.
+
 ## Estructura
 `public/index.php` único punto de entrada · `app/Core` infraestructura · `app/Compartido` piezas comunes ·
 `app/Modulos/<Modulo>` Controller → Servicio → Repositorio (solo el Repositorio escribe SQL) ·
@@ -23,11 +26,13 @@ En IIS el sitio apunta a `public/` (lleva su `web.config`; requiere URL Rewrite)
 - `php pruebas/capas.php` — el SQL vive solo en los Repositorios (Controllers y Servicios no llaman a `Db::`).
 - `php pruebas/periodos.php` — crear/cerrar/reabrir periodos y arrastre de saldos; se revierte solo.
 - `php pruebas/captura.php` — los módulos de captura completos (permisos, validación, periodo cerrado, cálculos, auditoría); se revierte solo.
+- `php pruebas/fase4.php` — reservas, caja chica, usuarios, adjuntos (incluye fotos a PDF), recurrentes y auditoría; se revierte solo.
 - `php pruebas/paridad_postgres.php` — compara MySQL contra una base Postgres de referencia con los mismos datos
   (conteos, fechas, sumas y las 3 vistas). Variables `PG_DSN`, `PG_USER`, `PG_PASS`.
 - `bash pruebas/paridad_estado_cuenta.sh` — el estado de cuenta de cada periodo contra la lógica ORIGINAL de Next.js
   (necesita Node 22 y `npm install` en la raíz; variable `PG_URL`).
-- `bash pruebas/interfaz_captura.sh` — captura y edición con navegador real contra una **copia desechable** de la base (crea gastos, viajes, marineros, insumos; usa el capitán).
+- `bash pruebas/paridad_recurrentes.sh` — los cargos recurrentes contra la lógica ORIGINAL en tres fechas de "hoy" (usa una copia desechable de Postgres).
+- `bash pruebas/interfaz_captura.sh` — captura, calendario, caja chica, usuarios, respaldos y recurrentes con navegador real contra una **copia desechable** de la base.
 - `node pruebas/interfaz.mjs` — recorre la interfaz con un navegador real (login, selector, visor de PDF, menús, salir).
 - `node pruebas/paridad_visual.mjs` + `python3 pruebas/comparar_capturas.py` — capturas de ambas apps y % de píxeles distintos.
   Requieren Playwright y Pillow; `PRUEBA_EMAIL`/`PRUEBA_CLAVE` de un administrador de prueba en las dos bases.

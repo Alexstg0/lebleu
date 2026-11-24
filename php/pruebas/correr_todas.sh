@@ -8,9 +8,11 @@ correr "Tamaño de archivos" php pruebas/tamano_de_archivos.php
 correr "Capas (SQL solo en Repositorios)" php pruebas/capas.php
 correr "Periodos" php pruebas/periodos.php
 correr "Captura (alta, edición, baja, permisos, auditoría)" php pruebas/captura.php
+correr "Fase 4 (reservas, caja chica, usuarios, adjuntos, recurrentes, auditoría)" php pruebas/fase4.php
 if [ -n "${PG_URL:-}" ]; then
   correr "Cuadre de tablas y vistas contra Postgres" env PG_DSN="${PG_DSN:-}" php pruebas/paridad_postgres.php
   correr "Estado de cuenta contra la lógica original" bash pruebas/paridad_estado_cuenta.sh
+  correr "Cargos recurrentes contra la lógica original" bash pruebas/paridad_recurrentes.sh
 else
   echo "(sin PG_URL: se omiten las pruebas de cuadre contra Postgres)"
 fi

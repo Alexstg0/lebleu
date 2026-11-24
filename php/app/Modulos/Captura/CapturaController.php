@@ -12,7 +12,7 @@ use Lebleu\Modulos\Periodos\PeriodosServicio;
 // Pantalla Capturar: el administrador ve todos los formularios en pestañas; el capitán solo el de viaje.
 final class CapturaController
 {
-    private const SCRIPTS_COMUNES = ['topbar.js', 'selector-periodo.js', 'formulario.js', 'marinero.js', 'viaje-capitan.js', 'viaje.js', 'insumos.js', 'renta.js', 'capturar.js'];
+    private const SCRIPTS_COMUNES = ['topbar.js', 'selector-periodo.js', 'adjuntos.js', 'formulario.js', 'marinero.js', 'viaje-capitan.js', 'viaje.js', 'insumos.js', 'renta.js', 'capturar.js'];
 
     public function pagina(Peticion $p, array $args): Respuesta
     {

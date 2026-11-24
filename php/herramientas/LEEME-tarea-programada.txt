@@ -1,0 +1,16 @@
+TAREA DIARIA DE LE BLEU (reemplaza al cron de Vercel)
+=====================================================
+
+Qué hace cada día:
+  - Crea el periodo del mes en curso si todavía no existe (copiando tipo de cambio, precio del litro y cargo administrativo).
+  - Genera la nómina del capitán (un cargo por cada viernes transcurrido) y el cargo administrativo mensual
+    de los periodos abiertos. Nunca duplica: cada cargo tiene una clave única.
+
+Cómo programarla (Programador de tareas de Windows):
+  1) Editar cron_lebleu.bat: ruta de php.exe (PHP) y carpeta del sitio.
+  2) Probar a mano: doble clic en cron_lebleu.bat y revisar cron.log (debe decir {"ok":true,...}).
+  3) Crear tarea básica: Acción "Iniciar un programa" -> la ruta de cron_lebleu.bat.
+     Desencadenador: diario, 07:00 (hora de la embarcación). Marcar "Ejecutar tanto si el usuario inicia sesión como si no".
+  4) La hora que usa el sistema es la de config.php -> zona_horaria (America/Mazatlan).
+
+Los cargos también se pueden generar a mano desde Administración / Movimientos, botón "Generar nómina y administrativo".

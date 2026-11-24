@@ -2,13 +2,10 @@
 // Prueba de los módulos de captura con la base real y los controladores completos
 // (permisos, validación, SQL, periodo cerrado, auditoría). Todo se revierte al terminar.
 // Uso:  php pruebas/captura.php
-require __DIR__ . '/../app/arranque.php';
+require __DIR__ . '/ayuda.php';
 
-use Lebleu\Core\Clave;
 use Lebleu\Core\Db;
-use Lebleu\Core\Peticion;
 use Lebleu\Modulos\Aportaciones\AportacionesController;
-use Lebleu\Modulos\Auth\AuthRepositorio;
 use Lebleu\Modulos\EstadoCuenta\EstadoCuentaServicio;
 use Lebleu\Modulos\Extraordinarios\AbonosController;
 use Lebleu\Modulos\Extraordinarios\ExtraordinariosController;
@@ -17,36 +14,6 @@ use Lebleu\Modulos\IngresosRenta\IngresosRentaController;
 use Lebleu\Modulos\Insumos\InsumosController;
 use Lebleu\Modulos\Marineros\MarinerosController;
 use Lebleu\Modulos\Viajes\ViajesController;
-
-$fallos = 0;
-function afirmar(string $nombre, bool $cond, string $extra = ''): void
-{
-    global $fallos;
-    echo ($cond ? 'ok      ' : 'FALLA   ') . $nombre . ($cond || $extra === '' ? '' : "  ($extra)") . "\n";
-    $fallos += $cond ? 0 : 1;
-}
-
-/** Llama a un controlador como lo haría el navegador. @return array{0:int,1:?array} estado y cuerpo */
-function llamar(object $ctrl, string $accion, ?string $token, array $json = [], array $consulta = []): array
-{
-    $p = new Peticion('POST', '/api/prueba', $json, $token ? ['sid' => $token] : [], $consulta);
-    $r = $ctrl->$accion($p, []);
-    return [$r->estado(), $r->datos()];
-}
-
-function usuario(string $rol): string
-{
-    Db::ejecutar('INSERT INTO usuarios (nombre, email, password_hash, rol) VALUES (?, ?, ?, ?)',
-        ["Prueba $rol", "$rol.captura@prueba.test", Clave::crear('x'), $rol]);
-    $token = bin2hex(random_bytes(32));
-    (new AuthRepositorio())->crearSesion($token, Db::ultimoId(), 1);
-    return $token;
-}
-
-function auditoria(): array
-{
-    return Db::fila('SELECT accion, tabla, registro_id, detalle, usuario_nombre FROM auditoria ORDER BY id DESC LIMIT 1') ?? [];
-}
 
 $abierto = (int) Db::fila("SELECT id FROM periodos WHERE estado = 'abierto' ORDER BY anio DESC, mes DESC LIMIT 1")['id'];
 $cerrado = (int) Db::fila("SELECT id FROM periodos WHERE estado = 'cerrado' ORDER BY anio, mes LIMIT 1")['id'];
@@ -75,8 +42,8 @@ Db::simular(function () use ($abierto, $cerrado) {
     $g = Db::fila('SELECT * FROM gastos_operativos ORDER BY id DESC LIMIT 1');
     afirmar('monto_mxn lo calcula la base (32.85 × 17.5 = 574.88)', $g['monto_mxn'] === '574.88', (string) $g['monto_mxn']);
     afirmar('en USD se guarda el tipo de cambio', (float) $g['tipo_cambio'] === 17.5);
-    afirmar('auditoría del alta con el texto original', auditoria()['detalle'] === 'Gasto "Válvula" (Ebay Prueba) por $32.85 USD'
-        && auditoria()['accion'] === 'crear' && auditoria()['usuario_nombre'] === 'Prueba admin', json_encode(auditoria(), JSON_UNESCAPED_UNICODE));
+    afirmar('auditoría del alta con el texto original', ultimaAuditoria()['detalle'] === 'Gasto "Válvula" (Ebay Prueba) por $32.85 USD'
+        && ultimaAuditoria()['accion'] === 'crear' && ultimaAuditoria()['usuario_nombre'] === 'Prueba admin', json_encode(ultimaAuditoria(), JSON_UNESCAPED_UNICODE));
 
     [$e, $d] = llamar($gastos, 'crear', $admin, ['moneda' => 'MXN', 'tipo_cambio' => 99] + $nuevo);
     $g2 = Db::fila('SELECT * FROM gastos_operativos ORDER BY id DESC LIMIT 1');
@@ -92,7 +59,7 @@ Db::simular(function () use ($abierto, $cerrado) {
     [$e] = llamar($gastos, 'editar', $admin, ['id' => $g['id'], 'monto_original' => 40, 'concepto' => 'Válvula 2'] + $nuevo);
     $g = Db::fila('SELECT * FROM gastos_operativos WHERE id = ?', [$g['id']]);
     afirmar('editar actualiza y recalcula (40 × 17.5 = 700)', $e === 200 && $g['monto_mxn'] === '700.00' && $g['concepto'] === 'Válvula 2');
-    afirmar('auditoría de la edición', auditoria()['detalle'] === 'Editó el gasto "Válvula 2" → $40 USD');
+    afirmar('auditoría de la edición', ultimaAuditoria()['detalle'] === 'Editó el gasto "Válvula 2" → $40 USD');
     [$e] = llamar($gastos, 'editar', $admin, ['id' => 999999] + $nuevo);
     afirmar('editar un gasto inexistente: 404', $e === 404);
 
@@ -106,7 +73,7 @@ Db::simular(function () use ($abierto, $cerrado) {
     afirmar('socio no puede borrar: 403', $e === 403);
     [$e] = llamar($gastos, 'borrar', $admin, [], ['id' => $g['id']]);
     afirmar('admin borra el gasto y queda en auditoría', $e === 200 && !Db::fila('SELECT 1 FROM gastos_operativos WHERE id = ?', [$g['id']])
-        && auditoria()['detalle'] === 'Borró el gasto "Válvula 2" de $700.00', auditoria()['detalle']);
+        && ultimaAuditoria()['detalle'] === 'Borró el gasto "Válvula 2" de $700.00', ultimaAuditoria()['detalle']);
     [$e] = llamar($gastos, 'borrar', $admin, [], ['id' => 999999]);
     afirmar('borrar algo que ya no existe es inofensivo (200)', $e === 200);
 
@@ -125,7 +92,7 @@ Db::simular(function () use ($abierto, $cerrado) {
     [$e] = llamar($extra, 'crear', $admin, $datosE);
     $x = Db::fila('SELECT * FROM extraordinarios ORDER BY id DESC LIMIT 1');
     afirmar('crea un extraordinario', $e === 200 && $x['monto_mxn'] === '5000.00' && (int) $x['liquidado'] === 0);
-    afirmar('auditoría del extraordinario', auditoria()['detalle'] === 'Extraordinario "Varada anual" por $5000 MXN');
+    afirmar('auditoría del extraordinario', ultimaAuditoria()['detalle'] === 'Extraordinario "Varada anual" por $5000 MXN');
     [$e, $d] = llamar($extra, 'crear', $admin, ['categoria' => 'nomina'] + $datosE);
     afirmar('categoría de gasto operativo no vale en extraordinarios', $e === 400);
     [$e] = llamar($extra, 'pagado', $admin, ['id' => $x['id'], 'liquidado' => true]);
@@ -135,7 +102,7 @@ Db::simular(function () use ($abierto, $cerrado) {
 
     $abonos = new AbonosController();
     [$e] = llamar($abonos, 'crear', $admin, ['periodo_id' => $abierto, 'socio_id' => 1, 'fecha' => '2026-08-12', 'monto' => 700.5, 'metodo' => 'transferencia']);
-    afirmar('crea un abono a extraordinarios', $e === 200 && auditoria()['detalle'] === 'Abono a extraordinarios de $700.5 (socio 1)');
+    afirmar('crea un abono a extraordinarios', $e === 200 && ultimaAuditoria()['detalle'] === 'Abono a extraordinarios de $700.5 (socio 1)');
     $cuenta = (new EstadoCuentaServicio())->obtener($abierto)['extraCuenta'];
     afirmar('el abono baja el saldo pendiente del socio 1', abs($cuenta[0]['abonosMes'] - 700.5) < 0.005);
 
@@ -146,7 +113,7 @@ Db::simular(function () use ($abierto, $cerrado) {
     afirmar('crea una aportación', $e === 200 && $a['monto'] === '25000.00' && $a['metodo'] === null);
     [$e] = llamar($apo, 'editar', $admin, ['id' => $a['id'], 'socio_id' => 2, 'fecha' => '2026-08-13', 'monto' => 26000, 'metodo' => 'efectivo']);
     afirmar('edita la aportación', $e === 200 && Db::fila('SELECT metodo FROM aportaciones WHERE id = ?', [$a['id']])['metodo'] === 'efectivo'
-        && auditoria()['detalle'] === 'Editó la aportación → $26000');
+        && ultimaAuditoria()['detalle'] === 'Editó la aportación → $26000');
     [$e] = llamar($apo, 'crear', $admin, ['periodo_id' => $abierto, 'fecha' => '2026-08-13', 'monto' => 1]);
     afirmar('aportación sin socio: 400', $e === 400);
 
@@ -156,7 +123,7 @@ Db::simular(function () use ($abierto, $cerrado) {
     afirmar('crea una renta y la utilidad la calcula la base (12000 − 2000)', $e === 200 && $r['utilidad'] === '10000.00');
     $bal = (new EstadoCuentaServicio())->obtener($abierto);
     afirmar('la utilidad de renta se reparte 50/50 en el estado de cuenta', abs($bal['balances'][0]['utilidad_renta'] - 5000) < 0.005 && abs($bal['kpis']['ingresosRenta'] - 12000) < 0.005);
-    afirmar('auditoría de la renta', auditoria()['detalle'] === 'Renta "Turista SA" por $12000');
+    afirmar('auditoría de la renta', ultimaAuditoria()['detalle'] === 'Renta "Turista SA" por $12000');
 
     // ---------------- Viajes y horómetros
     $viajes = new ViajesController();
@@ -173,7 +140,7 @@ Db::simular(function () use ($abierto, $cerrado) {
     $h = Db::fila('SELECT * FROM viaje_horometros WHERE viaje_id = ?', [$v['id']]);
     afirmar('guarda la lectura del horómetro y calcula las horas (4.5)', $h && $h['horas'] === '4.50');
     afirmar('deja la última lectura como horómetro actual del motor', Db::fila('SELECT horometro_actual FROM motores WHERE id = ?', [$motor['id']])['horometro_actual'] === '1004.50');
-    afirmar('auditoría del viaje con el nombre del cliente', str_starts_with(auditoria()['detalle'], 'Registró el viaje del 2026-08-15 (cliente 1)'), auditoria()['detalle']);
+    afirmar('auditoría del viaje con el nombre del cliente', str_starts_with(ultimaAuditoria()['detalle'], 'Registró el viaje del 2026-08-15 (cliente 1)'), ultimaAuditoria()['detalle']);
 
     $malo = $viaje;
     $malo['horometros'][0]['fin'] = '999';
@@ -207,7 +174,7 @@ Db::simular(function () use ($abierto, $cerrado) {
 
     [$e] = llamar($viajes, 'borrar', $admin, [], ['id' => $v['id']]);
     afirmar('el admin borra el viaje (se van sus lecturas y su insumo)', $e === 200 && !Db::fila('SELECT 1 FROM viaje_horometros WHERE viaje_id = ?', [$v['id']])
-        && auditoria()['detalle'] === 'Borró el viaje del 2026-08-15 (Familia Acosta)', auditoria()['detalle']);
+        && ultimaAuditoria()['detalle'] === 'Borró el viaje del 2026-08-15 (Familia Acosta)', ultimaAuditoria()['detalle']);
 
     // ---------------- Marineros
     $mar = new MarinerosController();
@@ -224,5 +191,4 @@ Db::simular(function () use ($abierto, $cerrado) {
 $despues = array_map(fn($t) => (int) Db::fila("SELECT COUNT(*) n FROM `$t`")['n'],
     ['gastos_operativos', 'extraordinarios', 'viajes', 'insumos', 'aportaciones', 'ingresos_renta', 'auditoria', 'usuarios', 'marineros']);
 afirmar('la prueba no dejó rastro en la base', $antes === $despues, json_encode([$antes, $despues]));
-echo $fallos ? "\n$fallos prueba(s) fallaron.\n" : "\nCaptura OK.\n";
-exit($fallos ? 1 : 0);
+terminar('Captura OK.');

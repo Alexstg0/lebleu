@@ -25,7 +25,7 @@
   function cargaGenerica(form) {
     var d = {};
     Array.prototype.forEach.call(form.elements, function (el) {
-      if (!el.name || el.type === 'button' || el.type === 'submit') return;
+      if (!el.name || el.type === 'button' || el.type === 'submit' || el.type === 'file') return;
       d[el.name] = el.type === 'checkbox' ? el.checked : el.value;
     });
     return d;
@@ -37,10 +37,21 @@
     });
   }
 
+  // Archivo de soporte opcional (solo en altas): se valida antes de guardar y se sube después.
+  function soporteDe(form) {
+    var campo = form.querySelector('[data-soporte]');
+    return campo && campo.files && campo.files[0] ? { campo: campo, archivo: campo.files[0] } : null;
+  }
+
   function enviar(form) {
     var tipo = form.getAttribute('data-calculo');
     var carga = L.armadores[tipo] ? L.armadores[tipo](form) : cargaGenerica(form);
     if (!carga) return;
+    var soporte = soporteDe(form);
+    if (soporte && L.validarArchivo) {
+      var motivo = L.validarArchivo(soporte.archivo);
+      if (motivo) { mostrar(form, false, motivo); return; }
+    }
     var editando = form.getAttribute('data-metodo') === 'PATCH';
     var boton = form.querySelector('[data-boton]');
     boton.disabled = true;
@@ -55,11 +66,18 @@
     }).then(function (r) { return r.json(); })
       .then(function (j) {
         if (!j.ok) { mostrar(form, false, j.error || 'Error al guardar.'); return; }
-        mostrar(form, true, editando ? 'Actualizado.' : 'Guardado correctamente.');
-        if (editando) { L.recargar(); return; }
-        limpiar(form);
-        if (L.despues[tipo]) L.despues[tipo](form);
-        L.refrescar();
+        if (editando) { mostrar(form, true, 'Actualizado.'); L.recargar(); return; }
+        var terminar = function (texto, ok) {
+          mostrar(form, ok, texto);
+          limpiar(form);
+          if (soporte) soporte.campo.value = '';
+          if (L.despues[tipo]) L.despues[tipo](form);
+          L.refrescar();
+        };
+        if (!soporte || !j.id) { terminar('Guardado correctamente.', true); return; }
+        return L.subirAdjunto(soporte.campo.getAttribute('data-soporte'), j.id, soporte.archivo)
+          .then(function () { terminar('Guardado correctamente.', true); })
+          .catch(function (e) { terminar('Guardado, pero el soporte no se pudo subir: ' + e.message + ' Agrégalo en Movimientos.', false); });
       })
       .catch(function (err) { mostrar(form, false, String((err && err.message) || err)); })
       .finally(function () {

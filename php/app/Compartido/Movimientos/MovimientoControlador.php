@@ -35,6 +35,12 @@ abstract class MovimientoControlador
         return ['admin'];
     }
 
+    /** false para los módulos que no dejan rastro en la bitácora (reservas). */
+    protected function auditar(): bool
+    {
+        return true;
+    }
+
     /** Periodo al que se mueve el movimiento al editar (solo si el módulo permite cambiarlo); se valida igual que el actual. */
     protected function periodoDestino(array $b): ?int
     {
@@ -48,7 +54,7 @@ abstract class MovimientoControlador
 
     protected function respuestaAlta(int $id): array
     {
-        return ['ok' => true];
+        return ['ok' => true, 'id' => $id];
     }
 
     public function crear(Peticion $p, array $args): Respuesta
@@ -68,7 +74,7 @@ abstract class MovimientoControlador
                 $this->alGuardar($id, $b, null);
                 return $id;
             });
-            AuditoriaServicio::registrar($usuario, 'crear', $this->tabla(), $id, $this->detalle('crear', $b, null));
+            $this->auditarSi($usuario, 'crear', $id, $this->detalle('crear', $b, null));
             return Respuesta::json($this->respuestaAlta($id));
         } catch (\InvalidArgumentException $e) {
             return Respuesta::error($e->getMessage(), 400);
@@ -105,7 +111,7 @@ abstract class MovimientoControlador
                 $this->repo()->actualizar($id, $this->valores($b, false));
                 $this->alGuardar($id, $b, $previo);
             });
-            AuditoriaServicio::registrar($usuario, 'editar', $this->tabla(), $id, $this->detalle('editar', $b, $previo));
+            $this->auditarSi($usuario, 'editar', $id, $this->detalle('editar', $b, $previo));
             return Respuesta::json(['ok' => true]);
         } catch (\InvalidArgumentException $e) {
             return Respuesta::error($e->getMessage(), 400);
@@ -132,11 +138,18 @@ abstract class MovimientoControlador
                     $this->repo()->borrar($id);
                     $this->alBorrar($previo);
                 });
-                AuditoriaServicio::registrar($usuario, 'borrar', $this->tabla(), $id, $this->detalle('borrar', [], $previo));
+                $this->auditarSi($usuario, 'borrar', $id, $this->detalle('borrar', [], $previo));
             }
             return Respuesta::json(['ok' => true]);
         } catch (\Throwable $e) {
             return $this->falla($e);
+        }
+    }
+
+    private function auditarSi(array $usuario, string $accion, int $id, string $detalle): void
+    {
+        if ($this->auditar()) {
+            AuditoriaServicio::registrar($usuario, $accion, $this->tabla(), $id, $detalle);
         }
     }
 

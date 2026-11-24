@@ -12,4 +12,12 @@ final class AuditoriaRepositorio
             [$usuarioId, $usuario, $accion, $tabla, $registroId, $detalle]
         );
     }
+
+    /** Últimos movimientos de la bitácora (más reciente primero). */
+    public function ultimos(int $limite): array
+    {
+        return Db::filas(
+            'SELECT id, usuario_nombre, accion, tabla, registro_id, detalle, created_at FROM auditoria ORDER BY id DESC LIMIT ' . max(1, $limite)
+        );
+    }
 }

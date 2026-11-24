@@ -23,6 +23,13 @@ final class Formato
         return self::MESES[$mes - 1] ?? (string) $mes;
     }
 
+    /** "2026-07-02" -> "2 de julio de 2026" */
+    public static function fechaLarga(string $iso): string
+    {
+        $p = explode('-', substr($iso, 0, 10));
+        return count($p) === 3 ? (int) $p[2] . ' de ' . mb_strtolower(self::mesNombre((int) $p[1])) . ' de ' . $p[0] : $iso;
+    }
+
     /** "2026-05-10" -> "10/05" */
     public static function fechaCorta(?string $fecha): string
     {

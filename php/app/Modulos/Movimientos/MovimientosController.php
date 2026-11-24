@@ -13,7 +13,7 @@ use Lebleu\Modulos\Periodos\PeriodosServicio;
 // Pantalla Movimientos (administrador): lo capturado del periodo, con editar y borrar.
 final class MovimientosController
 {
-    private const SCRIPTS = ['topbar.js', 'selector-periodo.js', 'visor-pdf.js', 'formulario.js', 'marinero.js', 'viaje.js', 'insumos.js', 'renta.js', 'movimientos.js'];
+    private const SCRIPTS = ['topbar.js', 'selector-periodo.js', 'visor-pdf.js', 'adjuntos.js', 'formulario.js', 'marinero.js', 'viaje.js', 'insumos.js', 'renta.js', 'movimientos.js'];
     private const FORMULARIO = ['op' => 'gasto', 'in' => 'insumo', 'vi' => 'viaje', 'ap' => 'aportacion', 'ex' => 'extraordinario', 'ae' => 'abono', 're' => 'renta'];
 
     public function pagina(Peticion $p, array $args): Respuesta

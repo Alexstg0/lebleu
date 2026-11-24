@@ -235,4 +235,24 @@ Probado en MariaDB 10.11 y PHP 8.3; falta confirmarlo en el MySQL 8 y el PHP del
 fotos se convierten a PDF, fase 4/5), el botón *Generar nómina y administrativo* (Recurrentes, fase 4) y los recibos PDF de gasto y de marinero (fase 5).
 Por eso Movimientos todavía no es idéntica a la original.
 
-Siguiente: fase 4 (Calendario/Reservas, Caja chica, Adjuntos, Usuarios, Auditoría, Recurrentes).
+**Fase 4 hecha** (calendario, caja chica, usuarios, auditoría, respaldos y cargos recurrentes):
+- Módulos `Reservas` (calendario de escritorio y móvil), `CajaChica` (filtro por caja, totales, balance corrido), `Usuarios`, `Auditoría`,
+  `Adjuntos` (subir, ver y borrar PDF; **las fotos JPG/PNG se convierten a PDF**) y `Recurrentes`. La columna *Respaldo (PDF)* y el botón
+  *Generar nómina y administrativo* de Movimientos ya funcionan.
+- **FPDF** quedó copiado en `php/vendor/fpdf` (con su licencia y las fuentes Helvetica): es la librería con la que se escribirán todos los PDF.
+- **Cargos recurrentes idénticos al original** en tres fechas de "hoy" (10, 10 y 11 cargos con montos, folios, claves y fechas iguales). El cron de
+  Vercel pasa a `scripts/cron_recurrentes.php` + Programador de tareas de Windows (`herramientas/LEEME-tarea-programada.txt`).
+- **Pruebas:** `fase4.php` (57 comprobaciones de permisos, validación, fotos a PDF, límites, auditoría y hora de BCS), `interfaz_fase4` con navegador real y paridad visual
+  de calendario (agosto y septiembre, escritorio y móvil, con su ventana), caja chica (general, por caja y ventana), usuarios y auditoría: solo difiere el indicador de Next.js.
+- **La auditoría visual encontró tres defectos reales, ya corregidos:** (1) Postgres pone las reservas sin hora al final del día y MySQL al principio;
+  (2) en caja chica filtrada, las filas ocultas seguían contando para el color de la franja de cada tarjeta en móvil (ahora se quitan de la tabla);
+  (3) un espacio en blanco entre los botones "Contraseña" y "Borrar" desplazaba las columnas de Usuarios.
+
+**Hallazgo importante: la app original que ustedes usan va por delante del repositorio.** En la captura de pantalla del formulario de gasto, la original trae el campo
+*Soporte (PDF o foto, opcional)* con la nota "Si no lo subes ahora…", que **no existe en el código de `main`**. Lo repliqué en gasto, insumo y extraordinario
+(guarda el movimiento y sube el archivo), pero solo puedo comparar contra lo que está en el repositorio. **Para que la paridad sea real hace falta subir al repositorio el código actual de la original.**
+
+**Pendiente de las pantallas ya hechas:** el botón *Reporte PDF* de Caja chica y los recibos de gasto y de marinero en Movimientos dependen de la fase 5 (PDF).
+Contraseñas: se conserva el mínimo de 6 caracteres del original (conviene subirlo a 8, como pide el resto del sistema; es un cambio de una línea).
+
+Siguiente: fase 5 (los PDF: estado de cuenta, recibos, soportes, marineros y caja chica).

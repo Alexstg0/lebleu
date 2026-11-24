@@ -43,6 +43,16 @@ final class Respuesta
         return $this->estado;
     }
 
+    public function cuerpo(): string
+    {
+        return $this->cuerpo;
+    }
+
+    public function cabecera(string $nombre): ?string
+    {
+        return $this->cabeceras[$nombre] ?? null;
+    }
+
     /** Cuerpo decodificado si la respuesta es JSON (útil en pruebas). */
     public function datos(): ?array
     {

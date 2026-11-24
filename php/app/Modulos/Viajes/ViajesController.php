@@ -58,11 +58,6 @@ final class ViajesController extends MovimientoControlador
         (new ViajesRepositorio())->reemplazarHorometros($id, self::lecturas($b['horometros'] ?? []));
     }
 
-    protected function respuestaAlta(int $id): array
-    {
-        return ['ok' => true, 'id' => $id];
-    }
-
     protected function detalle(string $accion, array $b, ?array $previo): string
     {
         return match ($accion) {

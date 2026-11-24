@@ -1,11 +1,13 @@
 <?php
 use Lebleu\Compartido\Encabezado;
 use Lebleu\Compartido\Formato as F;
+use Lebleu\Core\Vista;
 /** @var array $periodos @var array $periodo @var array $mov */
 $fecha = fn($r) => F::e(F::fechaCorta($r['fecha']));
 $acciones = fn(string $clave, string $url, string $etiqueta, int $id) =>
     '<td class="tc" style="white-space:nowrap"><button class="btn-link" data-editar="' . $clave . ':' . $id . '">Editar</button>'
     . '<button class="btn-link danger" data-borrar data-url="' . $url . '" data-id="' . $id . '" data-etiqueta="' . F::e($etiqueta) . '">Borrar</button></td>';
+$archivos = fn(string $columna, array $fila) => '<td>' . Vista::parcial(dirname(__DIR__, 2) . '/Adjuntos/vistas/adjuntos.php', ['adjuntos' => $fila['adjuntos'], 'columna' => $columna, 'id' => (int) $fila['id']]) . '</td>';
 $vacio = fn(int $cols, string $texto) => '<tr><td colspan="' . $cols . '" class="tc hint">' . $texto . '</td></tr>';
 $anomalo = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px" aria-label="anómalo"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>';
 $naranja = 'border-left-color:#c05621;color:#c05621';
@@ -21,24 +23,31 @@ $naranja = 'border-left-color:#c05621;color:#c05621';
   </div>
   <div style="height:18px"></div>
 
+  <div class="gen-rec">
+    <button class="btn" data-generar-recurrentes>Generar nómina y administrativo</button>
+    <span class="hint">Agrega la nómina del capitán (viernes) y el cargo administrativo mensual que falten.</span>
+    <span class="msg-ok" style="margin-left:4px" data-msg-recurrentes hidden></span>
+  </div>
+
+  <div data-refrescable="movimientos">
   <div class="section-label">Gastos operativos</div>
   <div class="table-card"><table>
-    <thead><tr><th>Fecha</th><th>Proveedor</th><th>Concepto</th><th class="tr">Monto</th><th class="tc">Acciones</th></tr></thead>
+    <thead><tr><th>Fecha</th><th>Proveedor</th><th>Concepto</th><th class="tr">Monto</th><th>Respaldo (PDF)</th><th class="tc">Acciones</th></tr></thead>
     <tbody>
-      <?php if (!$mov['operativos']) echo $vacio(5, 'Sin gastos operativos.'); ?>
+      <?php if (!$mov['operativos']) echo $vacio(6, 'Sin gastos operativos.'); ?>
       <?php foreach ($mov['operativos'] as $g): ?>
-      <tr><td><?= $fecha($g) ?></td><td><?= F::e($g['proveedor']) ?></td><td><?= F::e($g['concepto']) ?></td><td class="tr mono"><?= F::mxn($g['monto_mxn']) ?></td><?= $acciones('op', '/api/gastos-operativos', 'el gasto', (int) $g['id']) ?></tr>
+      <tr><td><?= $fecha($g) ?></td><td><?= F::e($g['proveedor']) ?></td><td><?= F::e($g['concepto']) ?></td><td class="tr mono"><?= F::mxn($g['monto_mxn']) ?></td><?= $archivos('gasto_id', $g) ?><?= $acciones('op', '/api/gastos-operativos', 'el gasto', (int) $g['id']) ?></tr>
       <?php endforeach; ?>
     </tbody></table></div>
 
   <div class="section-label">Insumos</div>
   <div class="table-card"><table>
-    <thead><tr><th>Fecha</th><th>Viaje</th><th>Proveedor</th><th>Concepto</th><th class="tr">Monto</th><th class="tc">Acciones</th></tr></thead>
+    <thead><tr><th>Fecha</th><th>Viaje</th><th>Proveedor</th><th>Concepto</th><th class="tr">Monto</th><th>Respaldo (PDF)</th><th class="tc">Acciones</th></tr></thead>
     <tbody>
-      <?php if (!$mov['insumos']) echo $vacio(6, 'Sin insumos.'); ?>
+      <?php if (!$mov['insumos']) echo $vacio(7, 'Sin insumos.'); ?>
       <?php foreach ($mov['insumos'] as $i): ?>
       <tr><td><?= $fecha($i) ?></td><td><?= $i['viaje_id'] ? F::e($i['viaje_cliente'] . ' · ' . F::fechaCorta($i['viaje_fecha'])) : '—' ?></td>
-        <td><?= F::e($i['proveedor'] ?: '—') ?></td><td><?= F::e($i['concepto'] ?: '—') ?></td><td class="tr mono"><?= F::mxn($i['monto_mxn']) ?></td><?= $acciones('in', '/api/insumos', 'el insumo', (int) $i['id']) ?></tr>
+        <td><?= F::e($i['proveedor'] ?: '—') ?></td><td><?= F::e($i['concepto'] ?: '—') ?></td><td class="tr mono"><?= F::mxn($i['monto_mxn']) ?></td><?= $archivos('insumo_id', $i) ?><?= $acciones('in', '/api/insumos', 'el insumo', (int) $i['id']) ?></tr>
       <?php endforeach; ?>
     </tbody></table></div>
 
@@ -79,11 +88,11 @@ $naranja = 'border-left-color:#c05621;color:#c05621';
 
   <div class="section-label" style="<?= $naranja ?>">Extraordinarios</div>
   <div class="table-card" style="border:1px solid #f5b7a0"><table>
-    <thead><tr><th>Fecha</th><th>Proveedor</th><th>Concepto</th><th class="tr">Monto</th><th class="tc">Acciones</th></tr></thead>
+    <thead><tr><th>Fecha</th><th>Proveedor</th><th>Concepto</th><th class="tr">Monto</th><th>Respaldo (PDF)</th><th class="tc">Acciones</th></tr></thead>
     <tbody>
-      <?php if (!$mov['extraordinarios']) echo $vacio(5, 'Sin extraordinarios.'); ?>
+      <?php if (!$mov['extraordinarios']) echo $vacio(6, 'Sin extraordinarios.'); ?>
       <?php foreach ($mov['extraordinarios'] as $e): ?>
-      <tr><td><?= $fecha($e) ?></td><td><?= F::e($e['proveedor']) ?></td><td><?= F::e($e['concepto']) ?></td><td class="tr mono"><?= F::mxn($e['monto_mxn']) ?></td><?= $acciones('ex', '/api/extraordinarios', 'el extraordinario', (int) $e['id']) ?></tr>
+      <tr><td><?= $fecha($e) ?></td><td><?= F::e($e['proveedor']) ?></td><td><?= F::e($e['concepto']) ?></td><td class="tr mono"><?= F::mxn($e['monto_mxn']) ?></td><?= $archivos('extraordinario_id', $e) ?><?= $acciones('ex', '/api/extraordinarios', 'el extraordinario', (int) $e['id']) ?></tr>
       <?php endforeach; ?>
     </tbody></table></div>
 
@@ -107,4 +116,5 @@ $naranja = 'border-left-color:#c05621;color:#c05621';
       <tr><td><?= $fecha($r) ?></td><td><?= F::e($r['cliente']) ?></td><td class="tr mono"><?= F::mxn($r['monto']) ?></td><td class="tr mono"><?= F::mxn($r['utilidad']) ?></td><?= $acciones('re', '/api/ingresos-renta', 'el ingreso', (int) $r['id']) ?></tr>
       <?php endforeach; ?>
     </tbody></table></div>
+  </div>
 </div>

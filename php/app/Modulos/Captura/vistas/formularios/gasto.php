@@ -17,6 +17,10 @@ $tc = isset($d['tipo_cambio']) ? (string) $d['tipo_cambio'] : (string) (float) $
     <div class="field"><label data-etiqueta-monto><?= $moneda === 'USD' ? 'Monto (USD)' : 'Monto (MXN)' ?></label><?= C::input('monto_original', isset($d['monto_original']) ? (string) $d['monto_original'] : '', ['type' => 'number', 'step' => '0.01', 'required' => true]) ?></div>
     <?= C::campo('Tipo de cambio', C::input('tipo_cambio', $tc, ['type' => 'number', 'step' => '0.0001']), '', 'data-solo-usd' . ($moneda === 'USD' ? '' : ' hidden')) ?>
     <?= C::campo('Comprobante / folio', C::input('comprobante_folio', $d['comprobante_folio'] ?? '', ['placeholder' => 'Factura, NA, SIPARE…'])) ?>
+    <?php if (!$editando): ?>
+    <?= C::campo('Soporte (PDF o foto, opcional)', C::input('soporte', '', ['type' => 'file', 'accept' => 'application/pdf,image/jpeg,image/png', 'data-soporte' => 'gasto_id']), 'full') ?>
+    <?php endif; ?>
   </div>
+  <?php if (!$editando): ?><div class="hint" style="margin-top:8px">Si no lo subes ahora, lo puedes agregar después en Administración / Movimientos.</div><?php endif; ?>
   <?= F::pie($editando, 'Guardar gasto') ?>
 </form>

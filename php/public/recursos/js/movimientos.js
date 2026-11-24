@@ -31,6 +31,26 @@
       return;
     }
 
+    var generar = e.target.closest('[data-generar-recurrentes]');
+    if (generar) {
+      var aviso = document.querySelector('[data-msg-recurrentes]');
+      generar.disabled = true;
+      generar.textContent = 'Generando…';
+      aviso.hidden = true;
+      L.enviarJson('/api/recurrentes', { periodoId: Number(wrap.getAttribute('data-periodo-id')) }).then(function (j) {
+        generar.disabled = false;
+        generar.textContent = 'Generar nómina y administrativo';
+        aviso.className = j.ok ? 'msg-ok' : 'msg-err';
+        var total = (j.nomina || 0) + (j.admin || 0);
+        aviso.textContent = !j.ok ? (j.error || 'No se pudo generar.')
+          : total === 0 ? 'Ya está todo al día — no había cargos pendientes.'
+          : 'Se generaron ' + j.nomina + ' nómina(s) y ' + j.admin + ' cargo(s) administrativo(s).';
+        aviso.hidden = false;
+        if (j.ok) L.refrescar();
+      });
+      return;
+    }
+
     var cancelar = e.target.closest('[data-cancelar]');
     if (cancelar) {
       var ed = cancelar.closest('tr[data-edicion]');
