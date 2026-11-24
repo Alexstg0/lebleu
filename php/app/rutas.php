@@ -3,6 +3,9 @@
 use Lebleu\Compartido\SaludController;
 use Lebleu\Core\Ruteador;
 use Lebleu\Modulos\Adjuntos\AdjuntosController;
+use Lebleu\Modulos\Analisis\AnalisisController;
+use Lebleu\Modulos\Bitacora\BitacoraController;
+use Lebleu\Modulos\Reportes\ReportesController;
 use Lebleu\Modulos\Auditoria\AuditoriaPaginaController;
 use Lebleu\Modulos\Auth\AuthController;
 use Lebleu\Modulos\Auth\AuthPaginaController;
@@ -34,6 +37,9 @@ return function (Ruteador $r): void {
     $r->agregar('GET', '/', [EstadoCuentaController::class, 'pagina']);
     $r->agregar('GET', '/periodos', [PeriodosPaginaController::class, 'pagina']);
     $r->agregar('GET', '/calendario', [CalendarioController::class, 'pagina']);
+    $r->agregar('GET', '/bitacora', [BitacoraController::class, 'pagina']);
+    $r->agregar('GET', '/reportes', [ReportesController::class, 'pagina']);
+    $r->agregar('GET', '/analisis', [AnalisisController::class, 'pagina']);
     $r->agregar('GET', '/capturar', [CapturaController::class, 'pagina']);
     $r->agregar('GET', '/usuarios', [UsuariosPaginaController::class, 'pagina']);
     $r->agregar('GET', '/auditoria', [AuditoriaPaginaController::class, 'pagina']);
