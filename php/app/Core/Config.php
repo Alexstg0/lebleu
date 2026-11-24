@@ -8,7 +8,8 @@ final class Config
     public static function obtener(string $ruta, mixed $defecto = null): mixed
     {
         if (self::$datos === null) {
-            $archivo = dirname(__DIR__, 2) . '/config/config.php';
+            // LEBLEU_CONFIG permite apuntar a otro archivo (pruebas con una base desechable).
+            $archivo = getenv('LEBLEU_CONFIG') ?: dirname(__DIR__, 2) . '/config/config.php';
             self::$datos = is_file($archivo) ? (require $archivo) : [];
         }
         $valor = self::$datos;

@@ -15,6 +15,8 @@ const vistas = { escritorio: { width: 1366, height: 900 }, movil: { width: 390, 
 const paginas = [
   ['dashboard', '/'], ['dashboard_periodo4', '/?periodo=4'], ['periodos', '/periodos'],
 ];
+// Pestañas de Capturar (administrador) y pantallas de Movimientos.
+const pestanas = ['Viaje', 'Gasto operativo', 'Insumos', 'Aportación', 'Extraordinario', 'Abono extraord.', 'Renta'];
 
 const navegador = await chromium.launch();
 for (const [vista, tam] of Object.entries(vistas)) {
@@ -35,6 +37,15 @@ for (const [vista, tam] of Object.entries(vistas)) {
       await pag.goto(base + ruta, { waitUntil: 'networkidle' });
       await pag.screenshot({ path: `${salida}/${app}__${nombre}__${vista}.png`, fullPage: true });
     }
+    for (const t of pestanas) {
+      await pag.goto(base + '/capturar', { waitUntil: 'networkidle' });
+      await pag.click(`button.tab >> text="${t}"`);
+      await pag.mouse.move(0, 0); // sin cursor encima y sin transición de color a medias
+      await pag.waitForTimeout(500);
+      await pag.screenshot({ path: `${salida}/${app}__capturar_${t.replace(/\W+/g, '')}__${vista}.png`, fullPage: true });
+    }
+    await pag.goto(base + '/movimientos', { waitUntil: 'networkidle' });
+    await pag.screenshot({ path: `${salida}/${app}__movimientos__${vista}.png`, fullPage: true });
     await pag.goto(base + '/', { waitUntil: 'networkidle' });
     if (vista === 'escritorio') {
       await pag.click('text=Administración');
@@ -45,6 +56,18 @@ for (const [vista, tam] of Object.entries(vistas)) {
       await pag.screenshot({ path: `${salida}/${app}__menu_lateral__${vista}.png` });
     }
     await ctx.close();
+
+    // Capitán: formulario simplificado de viaje.
+    if (process.env.PRUEBA_CAPITAN) {
+      ctx = await navegador.newContext({ viewport: tam });
+      const rc = await ctx.request.post(base + '/api/login', { data: { email: process.env.PRUEBA_CAPITAN, password: clave } });
+      if (!(await rc.json()).ok) throw new Error(`login de capitán falló en ${app}`);
+      pag = await ctx.newPage();
+      await pag.goto(base + '/capturar', { waitUntil: 'networkidle' });
+      await pag.screenshot({ path: `${salida}/${app}__capitan_capturar__${vista}.png`, fullPage: true });
+      await pag.selectOption('select[name=quien], .cap-form select >> nth=0', { index: 0 }).catch(() => {});
+      await ctx.close();
+    }
   }
 }
 await navegador.close();

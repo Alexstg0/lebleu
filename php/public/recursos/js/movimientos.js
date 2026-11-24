@@ -1,0 +1,52 @@
+// Pantalla Movimientos: editar una fila (el servidor entrega su formulario) y borrar.
+(function () {
+  var L = window.Lebleu;
+  var wrap = document.querySelector('[data-periodo-id]');
+
+  function cerrarEdicion() {
+    var abierta = document.querySelector('tr[data-edicion]');
+    if (abierta && abierta._original) abierta.replaceWith(abierta._original);
+  }
+
+  document.addEventListener('click', function (e) {
+    var editar = e.target.closest('[data-editar]');
+    if (editar) {
+      var fila = editar.closest('tr');
+      var columnas = fila.closest('table').querySelectorAll('thead th').length;
+      var url = '/movimientos/formulario?k=' + encodeURIComponent(editar.getAttribute('data-editar')) +
+                '&periodo=' + encodeURIComponent(wrap.getAttribute('data-periodo-id'));
+      editar.disabled = true;
+      fetch(url, { credentials: 'same-origin' })
+        .then(function (r) { return r.ok ? r.text() : r.json().then(function (j) { throw new Error(j.error || 'No se pudo abrir.'); }); })
+        .then(function (html) {
+          cerrarEdicion();
+          var ed = document.createElement('tr');
+          ed.setAttribute('data-edicion', '');
+          ed.innerHTML = '<td colspan="' + columnas + '">' + html + '</td>';
+          ed._original = fila;
+          fila.replaceWith(ed);
+          L.iniciarFormularios(ed);
+        })
+        .catch(function (err) { alert(err.message); editar.disabled = false; });
+      return;
+    }
+
+    var cancelar = e.target.closest('[data-cancelar]');
+    if (cancelar) {
+      var ed = cancelar.closest('tr[data-edicion]');
+      if (ed && ed._original) ed.replaceWith(ed._original);
+      return;
+    }
+
+    var borrar = e.target.closest('[data-borrar]');
+    if (borrar) {
+      if (!confirm('¿Borrar ' + borrar.getAttribute('data-etiqueta') + '? Esta acción no se puede deshacer.')) return;
+      fetch(borrar.getAttribute('data-url') + '?id=' + encodeURIComponent(borrar.getAttribute('data-id')), { method: 'DELETE' })
+        .then(function (r) { return r.json().catch(function () { return { ok: false }; }); })
+        .then(function (j) {
+          if (j.ok) L.recargar();
+          else alert(j.error || 'No se pudo borrar.');
+        });
+    }
+  });
+})();

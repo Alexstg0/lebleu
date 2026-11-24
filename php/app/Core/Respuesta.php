@@ -38,6 +38,18 @@ final class Respuesta
         return new self(200, $datos, ['Content-Type' => $mime] + $extra);
     }
 
+    public function estado(): int
+    {
+        return $this->estado;
+    }
+
+    /** Cuerpo decodificado si la respuesta es JSON (útil en pruebas). */
+    public function datos(): ?array
+    {
+        $d = json_decode($this->cuerpo, true);
+        return is_array($d) ? $d : null;
+    }
+
     public function enviar(bool $https): void
     {
         http_response_code($this->estado);

@@ -214,4 +214,25 @@ Probado en MariaDB 10.11 y PHP 8.3; falta confirmarlo en el MySQL 8 y el PHP del
 - Un capitán que inicia sesión es enviado a `/calendario`, que se porta en la fase 4.
 - "Recordarme" del login no hace nada, igual que en el original.
 
-Siguiente: fase 3 (módulos de captura: gastos, extraordinarios, insumos, renta, aportaciones, viajes).
+**Fase 3 hecha** (captura de movimientos):
+- Módulos `GastosOperativos`, `Extraordinarios` (con abonos), `Aportaciones`, `IngresosRenta`, `Insumos`, `Viajes`
+  (horómetros por motor) y `Marineros`, más `Catalogos`, `Captura` y `Movimientos`. Los siete de movimientos comparten una base
+  (`Compartido/Movimientos`: permiso → periodo cerrado → validar → guardar en transacción → auditar); cada módulo solo declara sus campos y su texto
+  de auditoría, y todo el SQL queda en su Repositorio.
+- Pantallas **Capturar** (administrador, 7 pestañas; capitán, formulario simplificado) y **Movimientos** (editar con el mismo formulario y borrar).
+  Los formularios sirven para alta y edición y los cálculos del viaje (galones → litros, consumo, costo, total) son los del original.
+- **Pruebas:** `captura.php` 62/62 (permisos, validación, periodo cerrado, cálculos de la base, insumos que alimentan el costo del viaje, auditoría
+  con los textos originales); `interfaz_captura` 34/34 con navegador real sobre una copia desechable; paridad visual de las 7 pestañas, el formulario del
+  capitán y el login en escritorio y móvil: solo difiere el indicador de desarrollo de Next.js (0.09 %–0.3 %). Cazó un error mío: el "Total viaje" abría en $0.00.
+- Modo SQL estricto en cada conexión: un dato inválido es un error, nunca se recorta ni se convierte en silencio.
+
+**Diferencias deliberadas respecto al original** (todas hacen el sistema más estricto o seguro):
+- Se valida en el servidor (fechas reales, números, textos obligatorios y categorías) y se contesta con un mensaje; el original dejaba que la base fallara con un error genérico.
+- Editar algo que no existe responde 404 (el original decía "ok"). No se puede mover un insumo a un periodo cerrado (el original lo permitía).
+- Alta de viaje y sus lecturas de horómetro van en una sola transacción (el original podía dejar un viaje sin lecturas).
+
+**Pendiente de esta pantalla** (depende de módulos que vienen después): en Movimientos faltan la columna *Respaldo (PDF)* (subir/borrar archivos; las
+fotos se convierten a PDF, fase 4/5), el botón *Generar nómina y administrativo* (Recurrentes, fase 4) y los recibos PDF de gasto y de marinero (fase 5).
+Por eso Movimientos todavía no es idéntica a la original.
+
+Siguiente: fase 4 (Calendario/Reservas, Caja chica, Adjuntos, Usuarios, Auditoría, Recurrentes).

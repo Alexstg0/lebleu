@@ -7,8 +7,18 @@ final class Peticion
     public readonly string $ruta;
     private ?array $json = null;
 
-    public function __construct(?string $metodo = null, ?string $uri = null)
-    {
+    /**
+     * Normalmente se arma sola desde la petición HTTP. Las pruebas pueden darle cuerpo JSON, cookies y
+     * parámetros de consulta propios para ejercitar un controlador sin servidor web.
+     */
+    public function __construct(
+        ?string $metodo = null,
+        ?string $uri = null,
+        ?array $json = null,
+        private ?array $cookies = null,
+        private ?array $parametros = null
+    ) {
+        $this->json = $json;
         $this->metodo = strtoupper($metodo ?? ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
         $ruta = parse_url($uri ?? ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/';
         $base = rtrim((string) Config::obtener('base_url', ''), '/');
@@ -34,12 +44,12 @@ final class Peticion
 
     public function consulta(string $clave, mixed $defecto = null): mixed
     {
-        return $_GET[$clave] ?? $defecto;
+        return ($this->parametros ?? $_GET)[$clave] ?? $defecto;
     }
 
     public function cookie(string $clave): ?string
     {
-        $v = $_COOKIE[$clave] ?? null;
+        $v = ($this->cookies ?? $_COOKIE)[$clave] ?? null;
         return is_string($v) ? $v : null;
     }
 

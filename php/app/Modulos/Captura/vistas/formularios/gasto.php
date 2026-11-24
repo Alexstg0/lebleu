@@ -1,0 +1,22 @@
+<?php
+use Lebleu\Compartido\Campos as C;
+use Lebleu\Modulos\Captura\Formularios as F;
+/** @var ?array $d @var array $ctx @var bool $editando */
+$moneda = $d['moneda'] ?? 'MXN';
+$tc = isset($d['tipo_cambio']) ? (string) $d['tipo_cambio'] : (string) (float) $ctx['tipoCambio'];
+?>
+<form class="form-card" <?= F::atributosForm('/api/gastos-operativos', $editando, 'proveedor,concepto,monto_original,comprobante_folio') ?>>
+  <?= F::ocultos($d, $ctx['periodoId']) ?>
+  <?php if (!$editando): ?><h2>Nuevo gasto operativo (50/50)</h2><?php endif; ?>
+  <div class="grid">
+    <?= C::campo('Fecha', C::input('fecha', $d['fecha'] ?? date('Y-m-d'), ['type' => 'date', 'required' => true])) ?>
+    <?= C::campo('Categoría', C::select('categoria', ['nomina' => 'Nómina', 'impuesto' => 'Impuesto', 'servicio' => 'Servicio', 'refaccion' => 'Refacción', 'consumible' => 'Consumible', 'admin' => 'Administración', 'otro' => 'Otro'], $d['categoria'] ?? 'servicio')) ?>
+    <?= C::campo('Proveedor', C::input('proveedor', $d['proveedor'] ?? '', ['required' => true])) ?>
+    <?= C::campo('Concepto', C::input('concepto', $d['concepto'] ?? '', ['required' => true])) ?>
+    <?= C::campo('Moneda', C::select('moneda', ['MXN' => 'MXN', 'USD' => 'USD'], $moneda, ['data-moneda' => true])) ?>
+    <div class="field"><label data-etiqueta-monto><?= $moneda === 'USD' ? 'Monto (USD)' : 'Monto (MXN)' ?></label><?= C::input('monto_original', isset($d['monto_original']) ? (string) $d['monto_original'] : '', ['type' => 'number', 'step' => '0.01', 'required' => true]) ?></div>
+    <?= C::campo('Tipo de cambio', C::input('tipo_cambio', $tc, ['type' => 'number', 'step' => '0.0001']), '', 'data-solo-usd' . ($moneda === 'USD' ? '' : ' hidden')) ?>
+    <?= C::campo('Comprobante / folio', C::input('comprobante_folio', $d['comprobante_folio'] ?? '', ['placeholder' => 'Factura, NA, SIPARE…'])) ?>
+  </div>
+  <?= F::pie($editando, 'Guardar gasto') ?>
+</form>
