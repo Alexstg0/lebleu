@@ -51,6 +51,19 @@
       return;
     }
 
+    var recibo = e.target.closest('[data-generar-recibo]');
+    if (recibo) {
+      recibo.disabled = true;
+      recibo.textContent = '…';
+      L.enviarJson('/api/gastos-operativos/recibo', { gasto_id: Number(recibo.getAttribute('data-generar-recibo')) }).then(function (j) {
+        if (j.ok) { L.recargar(); return; }
+        recibo.disabled = false;
+        recibo.textContent = 'Generar recibo';
+        alert(j.error || 'No se pudo generar el recibo.');
+      });
+      return;
+    }
+
     var cancelar = e.target.closest('[data-cancelar]');
     if (cancelar) {
       var ed = cancelar.closest('tr[data-edicion]');

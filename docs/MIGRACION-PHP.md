@@ -209,8 +209,7 @@ Probado en MariaDB 10.11 y PHP 8.3; falta confirmarlo en el MySQL 8 y el PHP del
 - **Error del original (no replicado):** el tablero calcula "50% c/u" con flotantes y en totales de centavos nones queda un
   centavo abajo (periodo julio: muestra $33,754.46, pero el socio 1 realmente paga $33,754.47 según la vista). PHP calcula exacto.
   La prueba lo marca como NOTA y no como fallo.
-- Al cerrar un periodo todavía **no se archiva el PDF** del estado de cuenta (llega con Reportes, fase 5); la pantalla lo avisa
-  igual que cuando falla en el original. El código ya tiene el punto de enganche (`ArchivadorEstado`).
+- ~~Al cerrar un periodo todavía no se archiva el PDF del estado de cuenta~~ → resuelto en la fase 5 (`ArchivadorPdf`).
 - Un capitán que inicia sesión es enviado a `/calendario`, que se porta en la fase 4.
 - "Recordarme" del login no hace nada, igual que en el original.
 
@@ -233,7 +232,7 @@ Probado en MariaDB 10.11 y PHP 8.3; falta confirmarlo en el MySQL 8 y el PHP del
 
 **Pendiente de esta pantalla** (depende de módulos que vienen después): en Movimientos faltan la columna *Respaldo (PDF)* (subir/borrar archivos; las
 fotos se convierten a PDF, fase 4/5), el botón *Generar nómina y administrativo* (Recurrentes, fase 4) y los recibos PDF de gasto y de marinero (fase 5).
-Por eso Movimientos todavía no es idéntica a la original.
+~~Por eso Movimientos todavía no es idéntica a la original~~ → ya lo es desde la fase 5 (ver abajo).
 
 **Fase 4 hecha** (calendario, caja chica, usuarios, auditoría, respaldos y cargos recurrentes):
 - Módulos `Reservas` (calendario de escritorio y móvil), `CajaChica` (filtro por caja, totales, balance corrido), `Usuarios`, `Auditoría`,
@@ -252,7 +251,32 @@ Por eso Movimientos todavía no es idéntica a la original.
 *Soporte (PDF o foto, opcional)* con la nota "Si no lo subes ahora…", que **no existe en el código de `main`**. Lo repliqué en gasto, insumo y extraordinario
 (guarda el movimiento y sube el archivo), pero solo puedo comparar contra lo que está en el repositorio. **Para que la paridad sea real hace falta subir al repositorio el código actual de la original.**
 
-**Pendiente de las pantallas ya hechas:** el botón *Reporte PDF* de Caja chica y los recibos de gasto y de marinero en Movimientos dependen de la fase 5 (PDF).
 Contraseñas: se conserva el mínimo de 6 caracteres del original (conviene subirlo a 8, como pide el resto del sistema; es un cambio de una línea).
 
-Siguiente: fase 5 (los PDF: estado de cuenta, recibos, soportes, marineros y caja chica).
+**Fase 5 hecha** (los PDF, y con ella las tres pantallas que faltaban):
+- **Pantallas nuevas:** Bitácora (filtro por mes; el administrador edita en ventana y borra, el capitán solo lee), Reportes (4 tarjetas con visor de PDF) y Análisis
+  (4 cifras y 3 gráficas en SVG hechas en el servidor). Movimientos ya trae *Generar recibo* en cada gasto y *Ver PDF* del recibo de cada marinero.
+- **PDF con FPDF y dos piezas propias, sin dependencias:** `Compartido/Pdf/Lienzo` dibuja con la misma forma que `pdf-lib` (coordenadas desde abajo, texto con su línea
+  base), así los reportes se portaron casi renglón por renglón; y `LectorPdf` + `Fusionador` unen los comprobantes que suben los usuarios. Esto último no es opcional:
+  FPDF no importa PDF, FPDI gratuito no lee PDF 1.5+ y 100 de los 141 comprobantes reales son 1.6/1.7 con flujos de objetos y xref comprimido. El lector
+  también reconstruye archivos con la tabla dañada y rechaza (sin dejar páginas a medias) los cifrados o que no son PDF; en ese caso el reporte pone la hoja
+  "Comprobante no se pudo incrustar", como el original. Los 141 comprobantes se fusionan y las 165 páginas salen idénticas a las de origen.
+- **Reportes:** estado de cuenta, soportes (portadas + comprobantes), marineros (resumen + un recibo por viaje), completo (los tres en uno), caja chica
+  (carátula horizontal + soportes con sello al pie) y los recibos de viaje y de gasto. Al cerrar un periodo se archiva su estado de cuenta (`ArchivadorPdf`) y cada cargo
+  recurrente nace con su recibo (`ReciboGastoPdf`); `Servicios` es la raíz de composición que entrega estas implementaciones a los módulos que solo conocen la interfaz.
+- **Paridad de PDF contra el original, página por página** (`pruebas/paridad_pdfs.sh`: genera con el código de Next/pdf-lib sobre Postgres y con PHP sobre MySQL, rasteriza con
+  `pdftoppm` y compara píxeles y texto): **594 páginas, ninguna diferencia notable (≤ 0.008 %, suavizado de letra)**. Cazó cuatro defectos míos que ya no están: pdf-lib mide
+  el texto *con kerning* y FPDF no (centrados y recortes con "…" salían distintos; se exportaron los pares de Helvetica a `kerning.php`), "4 h" salía "4.00 h", un círculo
+  dibujado con el eje Y volteado y un orden de comprobantes.
+- **Pruebas:** `fase5.php` (50 comprobaciones: permisos, 400/403/404, nosniff, comprobante dañado, archivo al cerrar, recibos, recurrentes con recibo, fusión de los 141
+  comprobantes reales), `interfaz_fase5` con navegador real (30) y `rutas_paridad.php`: las 61 rutas del original (12 páginas + 49 métodos de API), 59 existen y 2 son
+  excepciones documentadas, ninguna falta. Auditoría visual de las 12 pantallas en escritorio y móvil: solo difiere el indicador de Next.js.
+
+**Diferencias deliberadas de la fase 5** (documentadas, no descuidos):
+- `GET /api/logout` del original es un resto de depuración que responde "GET logout test"; no se porta. `GET /api/cron/recurrentes` (Vercel Cron) lo reemplaza `scripts/cron_recurrentes.php`.
+- Dos comprobantes del *mismo* gasto: el original no los ordena (el orden queda al azar); PHP los ordena por id. La prueba lo reconoce como "mismas páginas, otro orden".
+- "Fecha" del reporte de caja chica y fecha por defecto de los formularios: PHP usa la hora de la embarcación (BCS); el original, la del servidor (UTC en Vercel).
+- Mitad de un monto con centavos impares: PHP exacto (ya explicado en la fase 2); el PDF muestra el mismo centavo que la pantalla.
+- Las páginas HTML llevan `Cache-Control: no-store` (el original, `no-store, must-revalidate`); el HSTS solo se envía bajo HTTPS.
+
+Siguiente: fase 6 (afinar permisos por rol con una pasada completa) y fase 7 (IIS, tarea programada, HTTPS, ensayo del corte).

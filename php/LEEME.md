@@ -32,7 +32,11 @@ En IIS el sitio apunta a `public/` (lleva su `web.config`; requiere URL Rewrite)
 - `bash pruebas/paridad_estado_cuenta.sh` — el estado de cuenta de cada periodo contra la lógica ORIGINAL de Next.js
   (necesita Node 22 y `npm install` en la raíz; variable `PG_URL`).
 - `bash pruebas/paridad_recurrentes.sh` — los cargos recurrentes contra la lógica ORIGINAL en tres fechas de "hoy" (usa una copia desechable de Postgres).
-- `bash pruebas/interfaz_captura.sh` — captura, calendario, caja chica, usuarios, respaldos y recurrentes con navegador real contra una **copia desechable** de la base.
+- `bash pruebas/interfaz_captura.sh` — captura, calendario, caja chica, usuarios, respaldos, recurrentes, bitácora, reportes y recibos con navegador real contra una **copia desechable** de la base.
+- `php pruebas/fase5.php` — reportes PDF, fusionador de PDF, recibos, archivo al cerrar un periodo y recibos de recurrentes; se revierte solo.
+- `php pruebas/rutas_paridad.php` — toda página y método de API del original existe en la tabla de rutas de PHP (salvo 2 excepciones documentadas).
+- `bash pruebas/paridad_pdfs.sh` — los PDF contra los del ORIGINAL (Node + pdf-lib) página por página, en píxeles y texto (copias desechables de ambas bases; requiere `pdftoppm`/`pdftotext`).
+- `node pruebas/paridad_visual_fase5.mjs` — Bitácora, Reportes y Análisis en ambas apps (después, `comparar_capturas.py`).
 - `node pruebas/interfaz.mjs` — recorre la interfaz con un navegador real (login, selector, visor de PDF, menús, salir).
 - `node pruebas/paridad_visual.mjs` + `python3 pruebas/comparar_capturas.py` — capturas de ambas apps y % de píxeles distintos.
   Requieren Playwright y Pillow; `PRUEBA_EMAIL`/`PRUEBA_CLAVE` de un administrador de prueba en las dos bases.

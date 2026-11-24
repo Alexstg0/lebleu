@@ -21,3 +21,4 @@ php -r '$i=imagecreatetruecolor(320,200); imagefill($i,0,0,imagecolorallocate($i
 export PRUEBA_PDF="$ARCHIVOS/soporte.pdf" PRUEBA_PNG="$ARCHIVOS/foto.png"
 PHP_URL="http://127.0.0.1:$PUERTO" node pruebas/interfaz_captura.mjs
 PHP_URL="http://127.0.0.1:$PUERTO" node pruebas/interfaz_fase4.mjs
+PHP_URL="http://127.0.0.1:$PUERTO" node pruebas/interfaz_fase5.mjs

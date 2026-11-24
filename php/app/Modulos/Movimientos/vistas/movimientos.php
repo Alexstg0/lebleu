@@ -7,7 +7,8 @@ $fecha = fn($r) => F::e(F::fechaCorta($r['fecha']));
 $acciones = fn(string $clave, string $url, string $etiqueta, int $id) =>
     '<td class="tc" style="white-space:nowrap"><button class="btn-link" data-editar="' . $clave . ':' . $id . '">Editar</button>'
     . '<button class="btn-link danger" data-borrar data-url="' . $url . '" data-id="' . $id . '" data-etiqueta="' . F::e($etiqueta) . '">Borrar</button></td>';
-$archivos = fn(string $columna, array $fila) => '<td>' . Vista::parcial(dirname(__DIR__, 2) . '/Adjuntos/vistas/adjuntos.php', ['adjuntos' => $fila['adjuntos'], 'columna' => $columna, 'id' => (int) $fila['id']]) . '</td>';
+$archivos = fn(string $columna, array $fila, string $extra = '') => '<td>' . Vista::parcial(dirname(__DIR__, 2) . '/Adjuntos/vistas/adjuntos.php', ['adjuntos' => $fila['adjuntos'], 'columna' => $columna, 'id' => (int) $fila['id']]) . $extra . '</td>';
+$generarRecibo = fn(array $g) => '<button class="adj-recibo" data-generar-recibo="' . (int) $g['id'] . '" title="Generar recibo PDF de este gasto">Generar recibo</button>';
 $vacio = fn(int $cols, string $texto) => '<tr><td colspan="' . $cols . '" class="tc hint">' . $texto . '</td></tr>';
 $anomalo = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px" aria-label="anómalo"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>';
 $naranja = 'border-left-color:#c05621;color:#c05621';
@@ -36,7 +37,7 @@ $naranja = 'border-left-color:#c05621;color:#c05621';
     <tbody>
       <?php if (!$mov['operativos']) echo $vacio(6, 'Sin gastos operativos.'); ?>
       <?php foreach ($mov['operativos'] as $g): ?>
-      <tr><td><?= $fecha($g) ?></td><td><?= F::e($g['proveedor']) ?></td><td><?= F::e($g['concepto']) ?></td><td class="tr mono"><?= F::mxn($g['monto_mxn']) ?></td><?= $archivos('gasto_id', $g) ?><?= $acciones('op', '/api/gastos-operativos', 'el gasto', (int) $g['id']) ?></tr>
+      <tr><td><?= $fecha($g) ?></td><td><?= F::e($g['proveedor']) ?></td><td><?= F::e($g['concepto']) ?></td><td class="tr mono"><?= F::mxn($g['monto_mxn']) ?></td><?= $archivos('gasto_id', $g, $generarRecibo($g)) ?><?= $acciones('op', '/api/gastos-operativos', 'el gasto', (int) $g['id']) ?></tr>
       <?php endforeach; ?>
     </tbody></table></div>
 
@@ -63,15 +64,16 @@ $naranja = 'border-left-color:#c05621;color:#c05621';
 
   <div class="section-label">Marineros</div>
   <div class="table-card"><table>
-    <thead><tr><th>Fecha</th><th>Marinero</th><th>Cliente / viaje</th><th class="tr">Pago</th></tr></thead>
+    <thead><tr><th>Fecha</th><th>Marinero</th><th>Cliente / viaje</th><th class="tr">Pago</th><th class="tc">Recibo</th></tr></thead>
     <tbody>
-      <?php if (!$mov['viajes']) echo $vacio(4, 'Sin viajes.'); ?>
+      <?php if (!$mov['viajes']) echo $vacio(5, 'Sin viajes.'); ?>
       <?php foreach ($mov['viajes'] as $v): ?>
       <tr><td><?= $fecha($v) ?></td><td><?= trim((string) $v['marinero']) !== '' ? F::e($v['marinero']) : '<span class="hint">Sin asignar</span>' ?></td>
-        <td><?= F::e($v['cliente_disp']) ?><?= $v['es_renta'] ? ' · Renta' : '' ?></td><td class="tr mono"><?= F::mxn($v['costo_marinero']) ?></td></tr>
+        <td><?= F::e($v['cliente_disp']) ?><?= $v['es_renta'] ? ' · Renta' : '' ?></td><td class="tr mono"><?= F::mxn($v['costo_marinero']) ?></td>
+        <td class="tc"><button type="button" class="btn-link" data-visor-pdf="/api/viajes/recibo?id=<?= (int) $v['id'] ?>" data-titulo="Recibo de pago a marinero">Ver PDF</button></td></tr>
       <?php endforeach; ?>
       <?php if ($mov['viajes']): ?>
-      <tr class="row-total"><td colspan="3" class="tr">TOTAL MARINEROS</td><td class="tr mono"><?= F::mxn(array_sum(array_map(fn($v) => \Lebleu\Compartido\Dinero::aCentavos($v['costo_marinero']), $mov['viajes'])) / 100) ?></td></tr>
+      <tr class="row-total"><td colspan="3" class="tr">TOTAL MARINEROS</td><td class="tr mono"><?= F::mxn(array_sum(array_map(fn($v) => \Lebleu\Compartido\Dinero::aCentavos($v['costo_marinero']), $mov['viajes'])) / 100) ?></td><td></td></tr>
       <?php endif; ?>
     </tbody></table></div>
   <div class="hint" style="margin:-8px 0 4px">El marinero y su pago se editan dentro de cada viaje (sección Viajes).</div>

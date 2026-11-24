@@ -25,7 +25,7 @@ final class Respuesta
 
     public static function html(string $html, int $estado = 200): self
     {
-        return new self($estado, $html, ['Content-Type' => 'text/html; charset=utf-8']);
+        return new self($estado, $html, ['Content-Type' => 'text/html; charset=utf-8', 'Cache-Control' => 'no-store, must-revalidate']);
     }
 
     public static function redirigir(string $url, int $estado = 302): self
