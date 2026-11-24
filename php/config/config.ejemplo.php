@@ -10,7 +10,5 @@ return [
     ],
     // Prefijo de URL si la app vive en una subcarpeta (ej. '/lebleu' en XAMPP). En producción ''.
     'base_url'    => '',
-    // Secreto del cron (el Programador de tareas lo manda; sin él el endpoint responde 401).
-    'cron_secreto' => 'cambiar-por-un-texto-largo-y-aleatorio',
     'zona_horaria' => 'America/Mazatlan',
 ];

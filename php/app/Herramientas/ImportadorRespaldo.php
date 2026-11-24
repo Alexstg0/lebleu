@@ -43,9 +43,13 @@ final class ImportadorRespaldo
         }
         $tipos = $this->tiposDe($tabla);
         $fila = [];
+        $generadas = $this->generadasDe($tabla);
         foreach ($cols as $i => $col) {
             if (!isset($tipos[$col])) {
                 throw new \RuntimeException("La columna $tabla.$col no existe en MySQL.");
+            }
+            if (in_array($col, $generadas, true)) {
+                continue; // columna calculada por MySQL: se ignora el valor del respaldo
             }
             $fila[$col] = $this->convertir($vals[$i], $tipos[$col]);
         }
@@ -71,6 +75,16 @@ final class ImportadorRespaldo
             return $utc->setTimezone(new DateTimeZone('America/Mazatlan'))->format('Y-m-d');
         }
         return $utc->format('Y-m-d H:i:s');
+    }
+
+    /** @return string[] columnas GENERATED de la tabla */
+    private function generadasDe(string $tabla): array
+    {
+        return array_column(Db::filas(
+            "SELECT COLUMN_NAME AS c FROM information_schema.COLUMNS
+              WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND EXTRA LIKE '%GENERATED%'",
+            [$tabla]
+        ), 'c');
     }
 
     private function tiposDe(string $tabla): array

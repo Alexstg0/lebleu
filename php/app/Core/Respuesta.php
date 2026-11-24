@@ -63,6 +63,7 @@ final class Respuesta
     public function enviar(bool $https): void
     {
         http_response_code($this->estado);
+        header_remove('X-Powered-By'); // no anunciar la versión de PHP
         $seguridad = [
             'X-Frame-Options'        => 'SAMEORIGIN',
             'X-Content-Type-Options' => 'nosniff',

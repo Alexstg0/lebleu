@@ -3,7 +3,7 @@ use Lebleu\Compartido\Campos as C;
 use Lebleu\Compartido\Formato;
 use Lebleu\Modulos\Captura\Formularios as F;
 /** @var ?array $d @var array $ctx @var bool $editando */
-const GAL = 3.78541;
+defined('GAL') || define('GAL', 3.78541);
 $aGal = fn($litros) => $litros === null || $litros === '' ? '' : (string) round((float) $litros / GAL, 2);
 $socios = array_column($ctx['socios'], 'nombre', 'id');
 $clientes = ['' => '—'] + array_column($ctx['clientes'], 'nombre', 'id');

@@ -280,3 +280,24 @@ Contraseñas: se conserva el mínimo de 6 caracteres del original (conviene subi
 - Las páginas HTML llevan `Cache-Control: no-store` (el original, `no-store, must-revalidate`); el HSTS solo se envía bajo HTTPS.
 
 Siguiente: fase 6 (afinar permisos por rol con una pasada completa) y fase 7 (IIS, tarea programada, HTTPS, ensayo del corte).
+
+**Fase 6 hecha** (pruebas de roles y ajustes):
+- `pruebas/roles.php` lee los roles permitidos de **cada página y cada método de API directamente del código original** (`requireUser` / `apiGuard`, resolviendo
+  `ROLES` compartidos) y comprueba que PHP responde igual para sin sesión, administrador, capitán y socio: **224 combinaciones ruta × rol coinciden**
+  (permitido = no 401/403/405; denegado = 403 en API o redirección en página). Además comprueba la tabla de roles del negocio, que quien no puede ver una
+  pantalla vuelve a *su* inicio, y que una cookie inventada, una sesión vencida y un usuario desactivado no abren sesión.
+- Ajustes: `X-Powered-By` ya no se envía; `Cache-Control: no-store` en las páginas; el servidor de desarrollo ya no sirve `web.config`; una constante de `viaje.php`
+  que avisaba si el formulario se dibujaba dos veces en el mismo proceso.
+
+**Fase 7 hecha hasta donde se puede sin el servidor** (todo lo ejecutable está probado aquí; **lo que corre en tu Windows/IIS lo ejecutas tú**):
+- `docs/DESPLIEGUE-IIS.md` (paso a paso: PHP, IIS, FastCGI, permisos, MySQL, HTTPS con win-acme, DNS, tareas, prueba de humo) y `docs/CORTE.md` (el día, con reversa).
+- `public/web.config` endurecido (límite de subida, segmentos y extensiones ocultas, errores de la app sin reemplazar, sin cabeceras de versión, regla HTTPS lista para activar).
+- `scripts/verificar_servidor.php` (PHP, extensiones, `php.ini`, MySQL ≥ 8.0.16, `max_allowed_packet`, esquema, archivos), `scripts/prueba_humo.php` (sitio publicado: estáticos,
+  que no se descargue el código ni `config.php`, cabeceras, cookie, 11 pantallas, PDF, capitán, HTTPS, cierre de sesión; **pasa 58/58 contra el servidor de desarrollo**; encontró
+  dos defectos que ya corregí) y `scripts/ensayo_restauracion.php` (respaldo → base temporal → mismas filas, mismas vistas, mismos bytes de PDF; pasa).
+- `herramientas/instalar_tareas.bat` registra las dos tareas (recurrentes 07:00, respaldo 02:00).
+- **Ensayo de corte de punta a punta** (`pruebas/ensayo_corte.sh`): exporta de Postgres con `scripts/exportar-respaldo.mjs`, importa a MySQL temporal en 2 s y cuadra
+  *40/40* contra el origen. Hizo falta que el importador ignore las columnas generadas (`monto_mxn`, `total`).
+- **No probado por no tener el entorno:** PHP bajo IIS/FastCGI, HTTPS real, DNS, MySQL 8 real (aquí MariaDB 10.11), `instalar_tareas.bat` y los `.bat` en Windows.
+  La prueba de humo y el verificador están hechos justo para detectarlo el primer día.
+

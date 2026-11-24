@@ -37,6 +37,9 @@ En IIS el sitio apunta a `public/` (lleva su `web.config`; requiere URL Rewrite)
 - `php pruebas/rutas_paridad.php` — toda página y método de API del original existe en la tabla de rutas de PHP (salvo 2 excepciones documentadas).
 - `bash pruebas/paridad_pdfs.sh` — los PDF contra los del ORIGINAL (Node + pdf-lib) página por página, en píxeles y texto (copias desechables de ambas bases; requiere `pdftoppm`/`pdftotext`).
 - `node pruebas/paridad_visual_fase5.mjs` — Bitácora, Reportes y Análisis en ambas apps (después, `comparar_capturas.py`).
+- `php pruebas/roles.php` — matriz de permisos: cada página y API contra cada rol, leyendo las guardias del código ORIGINAL; se revierte sola.
+- `bash pruebas/ensayo_corte.sh` — ensayo del corte: exporta Postgres, importa a una base MySQL temporal y cuadra (ver `docs/CORTE.md`).
+- Del servidor: `php scripts/verificar_servidor.php`, `php scripts/prueba_humo.php URL correo clave` y `php scripts/ensayo_restauracion.php --admin=...` (ver `docs/DESPLIEGUE-IIS.md`).
 - `node pruebas/interfaz.mjs` — recorre la interfaz con un navegador real (login, selector, visor de PDF, menús, salir).
 - `node pruebas/paridad_visual.mjs` + `python3 pruebas/comparar_capturas.py` — capturas de ambas apps y % de píxeles distintos.
   Requieren Playwright y Pillow; `PRUEBA_EMAIL`/`PRUEBA_CLAVE` de un administrador de prueba en las dos bases.
