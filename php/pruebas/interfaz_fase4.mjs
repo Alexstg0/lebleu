@@ -21,11 +21,16 @@ async function entrar(email, viewport = { width: 1366, height: 900 }) {
 
 // =============================== Calendario (escritorio)
 const pag = await entrar(process.env.PRUEBA_EMAIL);
-await pag.goto(base + '/calendario?y=2026&m=9');
-afirmar('el calendario muestra el mes pedido', (await pag.textContent('.cal-title h1')) === 'Septiembre' && (await pag.textContent('.cal-title .yr')) === '2026');
-afirmar('la cuadrícula tiene los 30 días de septiembre', await pag.locator('.cal-cell:not(.empty)').count() === 30);
-await pag.click('[data-nueva="2026-09-20"]');
-afirmar('"+" abre la ventana de nueva reserva con la fecha del día', (await pag.textContent('.modal h2')) === 'Nueva reserva' && (await pag.inputValue('.modal input[name=fecha]')) === '2026-09-20');
+const sig = new Date(); sig.setDate(1); sig.setMonth(sig.getMonth() + 1);
+const [anioS, mesS] = [sig.getFullYear(), sig.getMonth() + 1];
+const MESES_ES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+const diaS = (d) => `${anioS}-${String(mesS).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+const diasMes = new Date(anioS, mesS, 0).getDate();
+await pag.goto(base + `/calendario?y=${anioS}&m=${mesS}`);
+afirmar('el calendario muestra el mes pedido', (await pag.textContent('.cal-title h1')) === MESES_ES[mesS - 1] && (await pag.textContent('.cal-title .yr')) === String(anioS));
+afirmar('la cuadrícula tiene todos los días del mes', await pag.locator('.cal-cell:not(.empty)').count() === diasMes);
+await pag.click(`[data-nueva="${diaS(20)}"]`);
+afirmar('"+" abre la ventana de nueva reserva con la fecha del día', (await pag.textContent('.modal h2')) === 'Nueva reserva' && (await pag.inputValue('.modal input[name=fecha]')) === diaS(20));
 await pag.fill('.modal input[name=cliente]', 'Cliente Calendario UI');
 await pag.fill('.modal input[name=hora]', '10:00');
 await pag.fill('.modal input[name=num_personas]', '4');
@@ -43,7 +48,7 @@ await pag.locator('.cal-chip', { hasText: 'Cliente Calendario UI' }).click();
 await Promise.all([pag.waitForNavigation(), pag.click('.modal [data-borrar]')]);
 afirmar('borrar pide confirmación y quita la reserva', pag.dialogos.some((m) => m.includes('¿Borrar esta reserva?')) && await pag.locator('.cal-chip', { hasText: 'Cliente Calendario UI' }).count() === 0);
 await pag.click('.cal-nav a[aria-label="Mes siguiente"]');
-afirmar('"Mes siguiente" navega a octubre', (await pag.textContent('.cal-title h1')) === 'Octubre');
+afirmar('"Mes siguiente" navega al mes que sigue', (await pag.textContent('.cal-title h1')) === MESES_ES[mesS % 12]);
 
 // =============================== Calendario (móvil)
 const movil = await entrar(process.env.PRUEBA_EMAIL, { width: 390, height: 844 });
@@ -52,8 +57,10 @@ await movil.click('.ical-day[data-dia="7"]');
 afirmar('en móvil, elegir un día muestra su detalle', (await movil.textContent('.ical-detail-head h3')) === '7 de Agosto' && await movil.locator('.ical-item').count() >= 1);
 await movil.click('.ical-day[data-dia="4"]');
 afirmar('un día sin reservas lo dice', (await movil.textContent('.ical-empty')) === 'Sin reservas este día.');
+await movil.goto(base + `/calendario?y=${anioS}&m=${mesS}`);
+await movil.click('.ical-day[data-dia="3"]');
 await movil.click('.ical-add');
-afirmar('"+ Reserva" abre la ventana con el día elegido', (await movil.inputValue('.modal input[name=fecha]')) === '2026-08-04');
+afirmar('"+ Reserva" abre la ventana con el día elegido', (await movil.inputValue('.modal input[name=fecha]')) === diaS(3));
 await movil.click('.modal [data-cancelar]');
 afirmar('"Cancelar" cierra la ventana', await movil.locator('.modal').count() === 0);
 

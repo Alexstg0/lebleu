@@ -42,6 +42,8 @@ final class RecurrentesServicio
             if ($gid) {
                 $this->recibos->paraGasto($gid);
                 $nomina++;
+            } elseif ($sin = $gastos->idSinRecibo("nom-$f")) {
+                $this->recibos->paraGasto($sin); // el cargo ya existía pero su recibo no se alcanzó a generar
             }
         }
 
@@ -54,6 +56,8 @@ final class RecurrentesServicio
             if ($gid) {
                 $this->recibos->paraGasto($gid);
                 $admin++;
+            } elseif ($sin = $gastos->idSinRecibo("adm-$mesClave")) {
+                $this->recibos->paraGasto($sin);
             }
         }
         return ['nomina' => $nomina, 'admin' => $admin];

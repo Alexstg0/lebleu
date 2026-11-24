@@ -12,6 +12,7 @@ if (PHP_SAPI !== 'cli') {
     exit;
 }
 try {
+    (new \Lebleu\Modulos\Auth\AuthRepositorio())->purgar(); // sesiones vencidas e intentos de login viejos
     $hoy = date('Y-m-d'); // hora de la embarcación (zona_horaria de config)
     $periodos = Servicios::periodos();
     $nuevo = $periodos->asegurarPeriodoActual($hoy);

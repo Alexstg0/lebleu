@@ -22,6 +22,33 @@
   var primero = Object.keys(porDia).map(Number).sort(function (a, b) { return a - b; })[0];
   var sel = esMesActual ? hoy.getDate() : primero || 1;
 
+  // ---------- Escritorio: cuadrícula estática. Lo que no cabe en el día se oculta y se ofrece "+N más".
+  function ajustarCeldas() {
+    document.querySelectorAll('.cal-cell:not(.empty)').forEach(function (celda) {
+      celda.classList.remove('abierta');
+      var viejo = celda.querySelector('.cal-mas');
+      if (viejo) viejo.remove();
+      var chips = Array.prototype.slice.call(celda.querySelectorAll('.cal-chip'));
+      chips.forEach(function (c) { c.classList.remove('oculta'); });
+      if (celda.scrollHeight <= celda.clientHeight + 1) return;
+      var boton = document.createElement('button');
+      boton.type = 'button';
+      boton.className = 'cal-mas';
+      boton.setAttribute('data-mas', '');
+      celda.appendChild(boton);
+      var ocultos = 0;
+      while (ocultos < chips.length && celda.scrollHeight > celda.clientHeight + 1) {
+        ocultos++;
+        chips[chips.length - ocultos].classList.add('oculta');
+        boton.textContent = '+' + ocultos + ' más';
+      }
+    });
+  }
+  function ajustarCuandoCargue() { ajustarCeldas(); if (document.fonts && document.fonts.ready) document.fonts.ready.then(ajustarCeldas); }
+  var temporizador;
+  window.addEventListener('resize', function () { clearTimeout(temporizador); temporizador = setTimeout(ajustarCeldas, 150); });
+  ajustarCuandoCargue();
+
   // ---------- Móvil: detalle del día elegido
   function detalleDe(r) {
     var tieneDur = r.duracion_horas != null;
@@ -30,7 +57,8 @@
   function pintarDetalle() {
     document.querySelectorAll('.ical-day[data-dia]').forEach(function (b) { b.classList.toggle('sel', Number(b.getAttribute('data-dia')) === sel); });
     var lista = porDia[sel] || [];
-    var h = '<div class="ical-detail-head"><h3>' + sel + ' de ' + MESES[datos.mes - 1] + '</h3><button class="ical-add" data-nueva="' + datos.anio + '-' + pad(datos.mes) + '-' + pad(sel) + '">+ Reserva</button></div>';
+    var fechaSel = datos.anio + '-' + pad(datos.mes) + '-' + pad(sel);
+    var h = '<div class="ical-detail-head"><h3>' + sel + ' de ' + MESES[datos.mes - 1] + '</h3>' + (fechaSel >= datos.hoy ? '<button class="ical-add" data-nueva="' + fechaSel + '">+ Reserva</button>' : '') + '</div>';
     h += lista.length === 0 ? '<div class="ical-empty">Sin reservas este día.</div>' : '<div class="ical-list">' + lista.map(function (r) {
       return '<button class="ical-item" data-reserva="' + r.id + '"><span class="ical-item-dot" style="background:' + color(r) + '"></span>' +
         '<span class="ical-item-info"><span class="ical-item-name">' + esc(r.cliente || r.socio_nombre || 'Reserva') + '</span>' +
@@ -49,7 +77,8 @@
     capa.className = 'modal-overlay';
     capa.innerHTML =
       '<div class="modal"><h2 style="margin:0 0 14px;font-size:18px">' + (r.id ? 'Editar reserva' : 'Nueva reserva') + '</h2><form><div class="grid">' +
-      '<div class="field"><label>Fecha</label><input type="date" name="fecha" required value="' + esc(r.fecha) + '"></div>' +
+      '<div class="field"><label>Fecha</label><input type="date" name="fecha" required value="' + esc(r.fecha) + '"' +
+        (r.id && r.fecha < datos.hoy ? ' readonly title="Una reserva que ya pasó no se puede mover"' : ' min="' + esc(datos.hoy) + '"') + '></div>' +
       '<div class="field"><label>Hora de salida</label><input type="time" name="hora" value="' + esc(r.hora) + '"></div>' +
       '<div class="field"><label>Cliente</label><input name="cliente" value="' + esc(r.cliente) + '" placeholder="Familia / nombre"></div>' +
       '<div class="field"><label>Socio</label><select name="socio_id">' + opciones + '</select></div>' +
@@ -97,6 +126,17 @@
   document.addEventListener('click', function (e) {
     var dia = e.target.closest('[data-dia]');
     if (dia) { sel = Number(dia.getAttribute('data-dia')); pintarDetalle(); return; }
+    var mas = e.target.closest('[data-mas]');
+    if (mas) {
+      var celda = mas.closest('.cal-cell');
+      var abierta = celda.classList.toggle('abierta');
+      mas.textContent = abierta ? 'Ver menos' : '+' + celda.querySelectorAll('.cal-chip.oculta').length + ' más';
+      return;
+    }
+    var abiertas = document.querySelectorAll('.cal-cell.abierta');
+    if (abiertas.length && !e.target.closest('.cal-cell.abierta')) {
+      abiertas.forEach(function (c) { c.classList.remove('abierta'); var b = c.querySelector('.cal-mas'); if (b) b.textContent = '+' + c.querySelectorAll('.cal-chip.oculta').length + ' más'; });
+    }
     var nueva = e.target.closest('[data-nueva]');
     if (nueva) {
       abrir({ id: null, fecha: nueva.getAttribute('data-nueva'), hora: '', cliente: '', socio_id: null, num_personas: '', duracion_horas: '', notas: '' });

@@ -71,6 +71,65 @@
     }
   });
 
+  // ---------- Arrastrar y soltar: sobre la caja de respaldos (Movimientos, Caja chica) o sobre un formulario con campo de soporte.
+  function zonaDe(el) {
+    var caja = el.closest && el.closest('[data-adjuntos]');
+    if (caja) return { tipo: 'caja', el: caja };
+    var form = el.closest && el.closest('[data-form]');
+    return form && form.querySelector('[data-soporte]') ? { tipo: 'form', el: form } : null;
+  }
+  function llevaArchivos(e) {
+    return e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') !== -1;
+  }
+  function aviso(form, texto) {
+    var campo = form.querySelector('[data-soporte]');
+    var e = form.querySelector('.adj-err[data-soltar]');
+    if (!e) {
+      e = document.createElement('span');
+      e.className = 'adj-err';
+      e.setAttribute('data-soltar', '');
+      campo.insertAdjacentElement('afterend', e);
+    }
+    e.textContent = texto;
+    e.hidden = !texto;
+  }
+  var resaltada = null;
+  function resaltar(el) {
+    if (resaltada && resaltada !== el) resaltada.classList.remove('soltando');
+    resaltada = el;
+    if (el) el.classList.add('soltando');
+  }
+  document.addEventListener('dragover', function (e) {
+    var z = llevaArchivos(e) ? zonaDe(e.target) : null;
+    if (!z) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    resaltar(z.el);
+  });
+  document.addEventListener('dragleave', function (e) {
+    if (resaltada && (!e.relatedTarget || !resaltada.contains(e.relatedTarget))) resaltar(null);
+  });
+  document.addEventListener('drop', function (e) {
+    var z = llevaArchivos(e) ? zonaDe(e.target) : null;
+    resaltar(null);
+    if (!z) return;
+    e.preventDefault();
+    var archivos = e.dataTransfer.files;
+    if (z.tipo === 'caja') {
+      error(z.el, archivos.length > 1 ? 'Suelta un archivo a la vez.' : '');
+      if (archivos.length === 1) subir(z.el, archivos[0]);
+      return;
+    }
+    if (archivos.length !== 1) { aviso(z.el, 'Suelta un solo archivo.'); return; }
+    var motivo = L.validarArchivo(archivos[0]);
+    aviso(z.el, motivo || '');
+    if (motivo) return;
+    var campo = z.el.querySelector('[data-soporte]');
+    var lista = new DataTransfer();
+    lista.items.add(archivos[0]);
+    campo.files = lista.files; // el formulario lo sube al guardar, igual que si se hubiera elegido con el botón
+  });
+
   document.addEventListener('change', function (e) {
     var caja = e.target.closest('[data-adjuntos]');
     if (caja && e.target.type === 'file' && e.target.files[0]) subir(caja, e.target.files[0]);

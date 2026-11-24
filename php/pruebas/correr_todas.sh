@@ -12,6 +12,7 @@ correr "Periodos" php pruebas/periodos.php
 correr "Captura (alta, edición, baja, permisos, auditoría)" php pruebas/captura.php
 correr "Fase 4 (reservas, caja chica, usuarios, adjuntos, recurrentes, auditoría)" php pruebas/fase4.php
 correr "Fase 5 (reportes PDF, fusionador, recibos, archivo al cerrar)" php -d memory_limit=1G pruebas/fase5.php
+correr "Revisión independiente (PDF hostiles, login, cierres, recurrentes, CSRF)" php -d memory_limit=256M pruebas/revision.php
 if [ -n "${PG_URL:-}" ]; then
   correr "Cuadre de tablas y vistas contra Postgres" env PG_DSN="${PG_DSN:-}" php pruebas/paridad_postgres.php
   correr "Estado de cuenta contra la lógica original" bash pruebas/paridad_estado_cuenta.sh

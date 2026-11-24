@@ -30,6 +30,6 @@ $viajeInicial = (string) ($d['viaje_id'] ?? ($viajes[0]['id'] ?? ''));
     <?= C::campo('Soporte (PDF o foto, opcional)', C::input('soporte', '', ['type' => 'file', 'accept' => 'application/pdf,image/jpeg,image/png', 'data-soporte' => 'insumo_id']), 'full') ?>
     <?php endif; ?>
   </div>
-  <?php if (!$editando): ?><div class="hint" style="margin-top:8px">Si no lo subes ahora, lo puedes agregar después en Administración / Movimientos.</div><?php endif; ?>
+  <?php if (!$editando): ?><div class="hint" style="margin-top:8px">Puedes arrastrar el archivo hasta aquí. Si no lo subes ahora, lo puedes agregar después en Administración / Movimientos.</div><?php endif; ?>
   <?= str_replace('data-boton', 'data-boton' . ($viajes ? '' : ' disabled'), F::pie($editando, 'Guardar insumos')) ?>
 </form>

@@ -16,6 +16,9 @@ final class ImagenAPdf
             throw new \InvalidArgumentException('La imagen no es un JPG o PNG válido.');
         }
         [$w, $h] = $info;
+        if ($w < 1 || $h < 1 || $w * $h > 25_000_000) {
+            throw new \InvalidArgumentException('La imagen es demasiado grande (máximo 25 megapíxeles). Tómala en tamaño reducido.');
+        }
         $esc = min((self::ANCHO - 2 * self::MARGEN) / $w, (self::ALTO - 2 * self::MARGEN) / $h, 1.5);
         $pw = $w * $esc;
         $ph = $h * $esc;

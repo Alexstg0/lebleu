@@ -64,4 +64,11 @@ final class AuthRepositorio
     {
         Db::ejecutar('DELETE FROM sesiones WHERE token = ?', [$token]);
     }
+
+    /** Borra sesiones vencidas e intentos de login viejos (las tablas no deben crecer sin límite). */
+    public function purgar(): void
+    {
+        Db::ejecutar('DELETE FROM sesiones WHERE expires_at < UTC_TIMESTAMP()');
+        Db::ejecutar('DELETE FROM login_intentos WHERE updated_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL 1 DAY)');
+    }
 }

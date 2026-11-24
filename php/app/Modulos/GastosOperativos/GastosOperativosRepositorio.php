@@ -28,4 +28,15 @@ final class GastosOperativosRepositorio extends MovimientoRepositorio
     {
         return (bool) Db::fila('SELECT id FROM gastos_operativos WHERE clave_recurrente = ?', [$clave]);
     }
+
+    public function idPorClaveRecurrente(string $clave): ?int
+    {
+        $f = Db::fila('SELECT id FROM gastos_operativos WHERE clave_recurrente = ?', [$clave]);
+        return $f ? (int) $f['id'] : null;
+    }
+
+    public function tieneRecibo(int $gastoId): bool
+    {
+        return (bool) Db::fila('SELECT 1 FROM adjuntos WHERE gasto_id = ? AND generado = 1 LIMIT 1', [$gastoId]);
+    }
 }

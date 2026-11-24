@@ -24,6 +24,6 @@ $tc = isset($d['tipo_cambio']) ? (string) $d['tipo_cambio'] : (string) (float) $
     <?= C::campo('Soporte (PDF o foto, opcional)', C::input('soporte', '', ['type' => 'file', 'accept' => 'application/pdf,image/jpeg,image/png', 'data-soporte' => 'extraordinario_id']), 'full') ?>
     <?php endif; ?>
   </div>
-  <?php if (!$editando): ?><div class="hint" style="margin-top:8px">Si no lo subes ahora, lo puedes agregar después en Administración / Movimientos.</div><?php endif; ?>
+  <?php if (!$editando): ?><div class="hint" style="margin-top:8px">Puedes arrastrar el archivo hasta aquí. Si no lo subes ahora, lo puedes agregar después en Administración / Movimientos.</div><?php endif; ?>
   <?= F::pie($editando, 'Guardar extraordinario', 'btn gold') ?>
 </form>

@@ -20,7 +20,8 @@ final class Peticion
     ) {
         $this->json = $json;
         $this->metodo = strtoupper($metodo ?? ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
-        $ruta = parse_url($uri ?? ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/';
+        // Bajo IIS con URL Rewrite, REQUEST_URI puede traer la ruta reescrita (/index.php): la original viene en X-Original-URL.
+        $ruta = parse_url($uri ?? ($_SERVER['HTTP_X_ORIGINAL_URL'] ?? $_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/';
         $base = rtrim((string) Config::obtener('base_url', ''), '/');
         if ($base !== '' && str_starts_with($ruta, $base)) {
             $ruta = substr($ruta, strlen($base)) ?: '/';
@@ -67,6 +68,7 @@ final class Peticion
     public function esHttps(): bool
     {
         return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-            || strtolower($this->cabecera('X-Forwarded-Proto')) === 'https';
+            // X-Forwarded-Proto solo se cree si el servidor está declarado detrás de un proxy (config 'confiar_proxy').
+            || (Config::obtener('confiar_proxy', false) && strtolower($this->cabecera('X-Forwarded-Proto')) === 'https');
     }
 }

@@ -58,6 +58,9 @@ final class UsuariosServicio
                 $this->repo->cerrarSesiones($id);
             }
             if (isset($b['activo']) && is_bool($b['activo'])) {
+                if (!$b['activo'] && $this->repo->otrosAdminsActivos($id) === 0 && $this->repo->esAdminActivo($id)) {
+                    throw new \InvalidArgumentException('No se puede desactivar al único administrador activo.');
+                }
                 $this->repo->fijarActivo($id, $b['activo']);
                 if (!$b['activo']) {
                     $this->repo->cerrarSesiones($id);

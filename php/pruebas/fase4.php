@@ -25,37 +25,51 @@ Db::simular(function () {
     // ================= Reservas
     $res = new ReservasController();
     $aud0 = cuenta('auditoria');
-    $septiembreAntes = count((new ReservasServicio())->delMes(2026, 9));
-    [$e] = llamar($res, 'crear', null, ['fecha' => '2026-09-05']);
+    // Las reservas solo se agendan hacia adelante: las pruebas usan fechas del mes que viene (siempre futuras).
+    $mesSig = new DateTimeImmutable('first day of next month');
+    [$f1, $f2, $ayer] = [$mesSig->modify('+4 days')->format('Y-m-d'), $mesSig->modify('+5 days')->format('Y-m-d'), date('Y-m-d', strtotime('-1 day'))];
+    $septiembreAntes = count((new ReservasServicio())->delMes((int) $mesSig->format('Y'), (int) $mesSig->format('n')));
+    [$e] = llamar($res, 'crear', null, ['fecha' => $f1]);
     afirmar('reservas sin sesión: 403', $e === 403);
     foreach (['admin' => $admin, 'capitán' => $capitan, 'socio' => $socio] as $quien => $t) {
-        [$e, $d] = llamar($res, 'crear', $t, ['fecha' => '2026-09-05', 'hora' => '14:30', 'cliente' => "Cliente $quien", 'socio_id' => 1, 'num_personas' => 6, 'duracion_horas' => 4, 'notas' => 'n']);
+        [$e, $d] = llamar($res, 'crear', $t, ['fecha' => $f1, 'hora' => '14:30', 'cliente' => "Cliente $quien", 'socio_id' => 1, 'num_personas' => 6, 'duracion_horas' => 4, 'notas' => 'n']);
         afirmar("$quien crea una reserva", $e === 200 && !empty($d['id']));
     }
     $r = Db::fila('SELECT * FROM reservas ORDER BY id DESC LIMIT 1');
     afirmar('la reserva guarda hora, personas y duración', substr($r['hora'], 0, 5) === '14:30' && (int) $r['num_personas'] === 6 && (float) $r['duracion_horas'] === 4.0);
     afirmar('las reservas no dejan rastro en auditoría (igual que el original)', cuenta('auditoria') === $aud0);
-    [$e] = llamar($res, 'crear', $socio, ['fecha' => '2026-09-05', 'hora' => '25:99']);
+    [$e] = llamar($res, 'crear', $socio, ['fecha' => $f1, 'hora' => '25:99']);
     afirmar('hora inválida: 400', $e === 400);
     [$e] = llamar($res, 'crear', $socio, ['fecha' => 'ayer']);
     afirmar('fecha inválida: 400', $e === 400);
-    [$e] = llamar($res, 'editar', $socio, ['id' => $r['id'], 'fecha' => '2026-09-06', 'cliente' => 'Otro', 'socio_id' => null]);
+    [$e] = llamar($res, 'editar', $socio, ['id' => $r['id'], 'fecha' => $f2, 'cliente' => 'Otro', 'socio_id' => null]);
     $r2 = Db::fila('SELECT * FROM reservas WHERE id = ?', [$r['id']]);
-    afirmar('el socio edita una reserva (socio vacío = externo)', $e === 200 && $r2['fecha'] === '2026-09-06' && $r2['socio_id'] === null && $r2['hora'] === null);
-    $mes = (new ReservasServicio())->delMes(2026, 9);
+    afirmar('el socio edita una reserva (socio vacío = externo)', $e === 200 && $r2['fecha'] === $f2 && $r2['socio_id'] === null && $r2['hora'] === null);
+    $mes = (new ReservasServicio())->delMes((int) $mesSig->format('Y'), (int) $mesSig->format('n'));
     afirmar('el servicio entrega las reservas del mes con la forma del calendario', count($mes) === $septiembreAntes + 3 && is_int($mes[0]['id']) && array_key_exists('socio_nombre', $mes[0]) && is_string($mes[0]['hora']));
+    // ----- No se agenda hacia atrás
+    [$e, $d] = llamar($res, 'crear', $socio, ['fecha' => $ayer, 'cliente' => 'Pasado']);
+    afirmar('crear una reserva en una fecha que ya pasó: 400', $e === 400 && str_contains($d['error'], 'ya pasaron'));
+    [$e] = llamar($res, 'crear', $admin, ['fecha' => date('Y-m-d'), 'cliente' => 'Hoy']);
+    afirmar('crear una reserva para hoy sí se puede', $e === 200);
+    [$e] = llamar($res, 'editar', $socio, ['id' => $r['id'], 'fecha' => $ayer, 'cliente' => 'Mover al pasado']);
+    afirmar('mover una reserva a una fecha pasada: 400', $e === 400 && Db::fila('SELECT fecha FROM reservas WHERE id = ?', [$r['id']])['fecha'] === $f2);
+    Db::ejecutar('INSERT INTO reservas (fecha, cliente) VALUES (?, ?)', [$ayer, 'Ya pasó']);
+    $pasada = (int) Db::ultimoId();
+    [$e] = llamar($res, 'editar', $admin, ['id' => $pasada, 'fecha' => $ayer, 'cliente' => 'Ya pasó', 'notas' => 'Se completa un dato']);
+    afirmar('una reserva que ya pasó se puede completar sin cambiarle la fecha', $e === 200 && Db::fila('SELECT notas FROM reservas WHERE id = ?', [$pasada])['notas'] === 'Se completa un dato');
     [$e] = llamar($res, 'borrar', $socio, [], ['id' => $r['id']]);
     afirmar('el socio borra una reserva', $e === 200 && !Db::fila('SELECT 1 FROM reservas WHERE id = ?', [$r['id']]));
 
     // ================= Caja chica
     $caja = new CajaChicaController();
-    [$e] = llamar($caja, 'crear', $socio, ['fecha' => '2026-09-05', 'monto' => 1]);
+    [$e] = llamar($caja, 'crear', $socio, ['fecha' => $f1, 'monto' => 1]);
     afirmar('el socio no puede usar caja chica: 403', $e === 403);
-    [$e, $d] = llamar($caja, 'crear', $capitan, ['fecha' => '2026-09-05', 'tipo' => 'gasto', 'caja_numero' => 99, 'proveedor' => 'Ferretería', 'concepto' => 'Cuerda', 'monto' => 350.5, 'abono' => 999]);
+    [$e, $d] = llamar($caja, 'crear', $capitan, ['fecha' => $f1, 'tipo' => 'gasto', 'caja_numero' => 99, 'proveedor' => 'Ferretería', 'concepto' => 'Cuerda', 'monto' => 350.5, 'abono' => 999]);
     $c = Db::fila('SELECT * FROM caja_chica ORDER BY id DESC LIMIT 1');
     afirmar('el capitán registra un gasto de caja (el abono se ignora)', $e === 200 && $c['monto'] === '350.50' && $c['abono'] === '0.00' && $c['tipo'] === 'gasto');
     afirmar('auditoría de caja chica con el texto original', ultimaAuditoria()['detalle'] === 'Caja 99: gasto "Cuerda" por $350.5', ultimaAuditoria()['detalle']);
-    [$e] = llamar($caja, 'crear', $admin, ['fecha' => '2026-09-06', 'tipo' => 'abono', 'caja_numero' => 99, 'concepto' => 'Reposición', 'monto' => 500, 'abono' => 1000]);
+    [$e] = llamar($caja, 'crear', $admin, ['fecha' => $f2, 'tipo' => 'abono', 'caja_numero' => 99, 'concepto' => 'Reposición', 'monto' => 500, 'abono' => 1000]);
     $a = Db::fila('SELECT * FROM caja_chica ORDER BY id DESC LIMIT 1');
     afirmar('un abono guarda monto 0 y su abono', $e === 200 && $a['monto'] === '0.00' && $a['abono'] === '1000.00' && $a['tipo'] === 'abono');
     $movs = array_values(array_filter((new CajaChicaServicio())->movimientos(), fn($m) => (int) $m['caja_numero'] === 99));

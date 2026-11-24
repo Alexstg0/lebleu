@@ -48,6 +48,9 @@ abstract class MovimientoControlador
     }
 
     /** Trabajo extra dentro de la misma transacción (ej. sincronizar el costo de un viaje). */
+    /** Reglas propias de un módulo sobre los valores ya validados; lanza InvalidArgumentException para rechazar. $previo: la fila actual si es edición. */
+    protected function validar(array $valores, ?array $previo): void {}
+
     protected function alGuardar(int $id, array $b, ?array $previo): void {}
 
     protected function alBorrar(array $previo): void {}
@@ -70,7 +73,9 @@ abstract class MovimientoControlador
                 return Respuesta::error($cerrado, 400);
             }
             $id = Db::transaccion(function () use ($b) {
-                $id = $this->repo()->insertar($this->valores($b, true));
+                $valores = $this->valores($b, true);
+                $this->validar($valores, null);
+                $id = $this->repo()->insertar($valores);
                 $this->alGuardar($id, $b, null);
                 return $id;
             });
@@ -108,7 +113,9 @@ abstract class MovimientoControlador
                 }
             }
             Db::transaccion(function () use ($id, $b, $previo) {
-                $this->repo()->actualizar($id, $this->valores($b, false));
+                $valores = $this->valores($b, false);
+                $this->validar($valores, $previo);
+                $this->repo()->actualizar($id, $valores);
                 $this->alGuardar($id, $b, $previo);
             });
             $this->auditarSi($usuario, 'editar', $id, $this->detalle('editar', $b, $previo));

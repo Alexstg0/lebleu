@@ -4,6 +4,10 @@ namespace Lebleu\Compartido\Pdf;
 // Descompresión de los flujos internos de un PDF (tabla xref comprimida y flujos de objetos): solo FlateDecode, con predictores PNG.
 final class Flujos
 {
+    /** Tope de lo que se descomprime en estructuras internas (un PDF hostil no debe agotar la memoria). */
+    private const MAX_BYTES = 64 << 20;
+    private const MAX_ANCHO = 1 << 20;
+
     /** @param callable(mixed): mixed $resolver sigue referencias del documento */
     public static function decodificar(Valor $f, callable $resolver): string
     {
@@ -17,9 +21,9 @@ final class Flujos
             if (!$filtro instanceof Valor || !in_array($filtro->v, ['FlateDecode', 'Fl'], true)) {
                 throw new \RuntimeException('Filtro no soportado en estructuras internas.');
             }
-            $raw = @gzuncompress($datos);
+            $raw = @gzuncompress($datos, self::MAX_BYTES);
             if ($raw === false) {
-                $raw = @gzinflate(substr($datos, 2));
+                $raw = @gzinflate(substr($datos, 2), self::MAX_BYTES);
             }
             if ($raw === false) {
                 throw new \RuntimeException('No se pudo descomprimir el flujo.');
@@ -38,6 +42,9 @@ final class Flujos
         $cols = (int) $resolver($parm->clave('Columns') ?? 1);
         $bpp = max(1, (int) ceil((int) $resolver($parm->clave('Colors') ?? 1) * (int) $resolver($parm->clave('BitsPerComponent') ?? 8) / 8));
         $ancho = (int) ceil($cols * (int) $resolver($parm->clave('Colors') ?? 1) * (int) $resolver($parm->clave('BitsPerComponent') ?? 8) / 8);
+        if ($ancho < 1 || $ancho > self::MAX_ANCHO) {
+            throw new \RuntimeException('Predictor con ancho de fila no válido.');
+        }
         $previa = array_fill(0, $ancho, 0);
         $salida = '';
         for ($p = 0; $p + $ancho + 1 <= strlen($d); $p += $ancho + 1) {

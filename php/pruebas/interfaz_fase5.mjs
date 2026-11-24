@@ -121,6 +121,101 @@ await pag.waitForSelector('.adj-viewer iframe');
 afirmar('el archivo del periodo se abre y es un PDF', await esPdf(pag, await pag.getAttribute('.adj-viewer iframe', 'src')));
 afirmar('Reportes/Movimientos/Periodos sin errores de JavaScript', pag.errores.length === 0, pag.errores.join(' | '));
 
+// =============================== Arrastrar y soltar el archivo de respaldo
+import fs from 'node:fs';
+const pdfB64 = fs.readFileSync(process.env.PRUEBA_PDF).toString('base64');
+/** Simula arrastrar un archivo sobre un elemento: dragover y luego drop, con un DataTransfer real. */
+const soltar = (p, selector, nombre, tipo, b64, solo = 'drop') => p.evaluate(({ selector, nombre, tipo, b64, solo }) => {
+  const el = document.querySelector(selector);
+  const dt = new DataTransfer();
+  dt.items.add(new File([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))], nombre, { type: tipo }));
+  const ev = (t) => el.dispatchEvent(new DragEvent(t, { bubbles: true, cancelable: true, dataTransfer: dt }));
+  ev('dragenter');
+  const over = ev('dragover');
+  const resaltado = !!document.querySelector('.soltando');
+  if (solo === 'drop') ev('drop');
+  return { prevenido: !over, resaltado };
+}, { selector, nombre, tipo, b64, solo });
+
+await pag.ctx.request.post(base + '/api/periodos/estado', { data: { id: Number(id), accion: 'reabrir' } }); // el periodo se cerró arriba
+await pag.goto(base + '/capturar#gasto');
+const g = '[data-panel="gasto"]';
+let r = await soltar(pag, `${g} input[name=proveedor]`, 'ticket.pdf', 'application/pdf', pdfB64, 'sobre');
+afirmar('al arrastrar un archivo sobre el formulario la zona se resalta', r.prevenido && r.resaltado);
+await pag.evaluate(() => document.dispatchEvent(new DragEvent('dragleave', { bubbles: true, relatedTarget: document.body })));
+afirmar('al salir del formulario se quita el resaltado', await pag.locator('.soltando').count() === 0);
+await soltar(pag, `${g} input[name=proveedor]`, 'ticket.pdf', 'application/pdf', pdfB64);
+afirmar('al soltar un PDF queda elegido en el campo de soporte', (await pag.evaluate((s) => document.querySelector(s + ' [data-soporte]').files[0]?.name, g)) === 'ticket.pdf');
+await soltar(pag, `${g} input[name=proveedor]`, 'notas.txt', 'text/plain', btoa('hola'));
+afirmar('un archivo que no es PDF o imagen se rechaza con aviso', (await pag.locator(`${g} .adj-err[data-soltar]`).textContent()).includes('Solo PDF o imagen'));
+await soltar(pag, `${g} input[name=proveedor]`, 'arrastrado.pdf', 'application/pdf', pdfB64);
+await pag.fill(`${g} input[name=proveedor]`, 'Proveedor Arrastre');
+await pag.fill(`${g} input[name=concepto]`, 'Gasto con archivo arrastrado');
+await pag.fill(`${g} input[name=monto_original]`, '50');
+await pag.click(`${g} [data-boton]`);
+await pag.waitForSelector(`${g} [data-mensaje]:not([hidden])`);
+const msgG = await pag.textContent(`${g} [data-mensaje]`);
+afirmar('guardar sube el archivo arrastrado junto con el gasto', msgG.includes('Guardado correctamente'), msgG);
+await pag.goto(base + '/movimientos'); // el periodo más reciente, donde se capturó el gasto
+const fila = pag.locator('tr', { hasText: 'Gasto con archivo arrastrado' });
+afirmar('el gasto aparece en Movimientos con su archivo adjunto', await fila.locator('.adj-chip').count() === 1 && (await fila.locator('.adj-name').getAttribute('data-titulo')) === 'arrastrado.pdf');
+await pag.evaluate(() => { [...document.querySelectorAll('tr')].find((t) => t.textContent.includes('Gasto con archivo arrastrado')).querySelector('[data-adjuntos]').id = 'caja-arrastre'; });
+const sel = '#caja-arrastre';
+r = await soltar(pag, sel, 'segundo.pdf', 'application/pdf', pdfB64, 'sobre');
+afirmar('en Movimientos la caja de respaldos se resalta al arrastrar encima', r.prevenido && r.resaltado);
+await Promise.all([pag.waitForNavigation(), soltar(pag, sel, 'segundo.pdf', 'application/pdf', pdfB64)]);
+afirmar('soltar un archivo sobre el gasto lo adjunta', await pag.locator('tr', { hasText: 'Gasto con archivo arrastrado' }).locator('.adj-chip').count() === 2);
+afirmar('arrastrar y soltar sin errores de JavaScript', pag.errores.length === 0, pag.errores.join(' | '));
+
+// =============================== Calendario estático y sin agendar hacia atrás
+const hoyISO = new Date().toISOString().slice(0, 10);
+const fut = new Date(); fut.setDate(1); fut.setMonth(fut.getMonth() + 1);
+const [yF, mF] = [fut.getFullYear(), fut.getMonth() + 1];
+const diaF = (d) => `${yF}-${String(mF).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+for (let i = 0; i < 6; i++) {
+  const r = await pag.ctx.request.post(base + '/api/reservas', { data: { fecha: diaF(10), hora: `${String(9 + i).padStart(2, "0")}:00`, cliente: `Cliente muy largo número ${i + 1} para probar el recorte`, num_personas: 4, notas: 'Una nota larga para probar que no deforma el calendario' } });
+  if (!(await r.json()).ok) throw new Error('no se pudo crear la reserva de prueba');
+}
+const medidas = () => pag.evaluate(() => ({
+  anchos: [...new Set([...document.querySelectorAll('.cal-head div')].map((d) => Math.round(d.getBoundingClientRect().width)))],
+  altos: [...new Set([...document.querySelectorAll('.cal-cell')].map((c) => Math.round(c.getBoundingClientRect().height)))],
+  celdas: [...new Set([...document.querySelectorAll('.cal-cell')].slice(0, 7).map((c) => Math.round(c.getBoundingClientRect().width)))],
+}));
+await pag.goto(base + '/calendario?y=2026&m=8');
+let m = await medidas();
+afirmar('el calendario tiene siete columnas iguales y todas las filas del mismo alto', m.anchos.length === 1 && m.celdas.length === 1 && m.altos.length === 1, JSON.stringify(m));
+const antes = JSON.stringify(m);
+await pag.goto(base + `/calendario?y=${yF}&m=${mF}`);
+m = await medidas();
+afirmar('con un día cargado de reservas la cuadrícula sigue idéntica', m.anchos.length === 1 && m.celdas.length === 1 && m.altos.length === 1 && JSON.stringify(m).split('"altos"')[1] === antes.split('"altos"')[1].replace(antes.split('"altos"')[1], JSON.stringify(m).split('"altos"')[1]), JSON.stringify(m));
+const celda = pag.locator('.cal-cell', { has: pag.locator(`[data-nueva="${diaF(10)}"]`) });
+afirmar('lo que no cabe se resume en "+N más"', (await celda.locator('.cal-mas').count()) === 1 && /^\+\d+ más$/.test(await celda.locator('.cal-mas').textContent()));
+afirmar('el texto largo se recorta dentro de su celda', await celda.locator('.cal-chip').first().evaluate((c) => c.getBoundingClientRect().right <= c.closest('.cal-cell').getBoundingClientRect().right + 1));
+await celda.locator('.cal-mas').click();
+afirmar('"+N más" despliega todas las reservas del día', (await celda.evaluate((c) => c.classList.contains('abierta'))) && (await celda.locator('.cal-chip:visible').count()) === 6);
+m = await medidas();
+afirmar('desplegar un día no mueve la cuadrícula (las filas conservan su alto)', m.celdas.length === 1 && m.anchos.length === 1 && (await pag.evaluate(() => [...document.querySelectorAll('.cal-body')].map((b) => Math.round(b.getBoundingClientRect().height))[0])) === await pag.evaluate(() => Math.round(document.querySelector('.cal-body').getBoundingClientRect().height)));
+await pag.mouse.click(5, 300);
+afirmar('al pulsar fuera, el día vuelve a recogerse', !(await celda.evaluate((c) => c.classList.contains('abierta'))));
+const mal = await pag.evaluate((hoy) => [...document.querySelectorAll('[data-nueva]')].map((b) => b.getAttribute('data-nueva')).filter((f) => f < hoy), hoyISO);
+afirmar('ningún día tiene "+" si ya pasó', mal.length === 0, mal.join(','));
+await pag.goto(base + '/calendario?y=2026&m=8');
+afirmar('un mes que ya pasó no tiene ningún "+" para agendar', await pag.locator('.cal-add').count() === 0);
+await pag.click('.cal-chip:not(.oculta)');
+afirmar('una reserva pasada se abre pero su fecha no se puede mover', (await pag.locator('.modal input[name=fecha]').getAttribute('readonly')) !== null);
+await pag.click('.modal [data-cancelar]');
+const rp = await pag.ctx.request.post(base + '/api/reservas', { data: { fecha: '2026-08-20', cliente: 'Retroactiva' } });
+const jp = await rp.json();
+afirmar('el servidor rechaza agendar en una fecha pasada', rp.status() === 400 && !jp.ok && jp.error.includes('ya pasaron'), JSON.stringify(jp));
+const movil = await entrar(process.env.PRUEBA_EMAIL, { width: 390, height: 844 });
+await movil.goto(base + '/calendario?y=2026&m=8');
+await movil.click('.ical-day[data-dia="7"]');
+afirmar('en móvil un día pasado no ofrece "+ Reserva"', await movil.locator('.ical-add').count() === 0);
+await movil.goto(base + `/calendario?y=${yF}&m=${mF}`);
+await movil.click('.ical-day[data-dia="10"]');
+afirmar('en móvil un día futuro sí la ofrece', await movil.locator('.ical-add').count() === 1);
+afirmar('calendario sin errores de JavaScript', pag.errores.length === 0 && movil.errores.length === 0, pag.errores.join(' | '));
+
 await nav.close();
 console.log(fallos ? `\n${fallos} prueba(s) fallaron.` : '\nINTERFAZ FASE 5 OK');
 process.exit(fallos ? 1 : 0);

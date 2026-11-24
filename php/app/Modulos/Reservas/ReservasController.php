@@ -51,6 +51,16 @@ final class ReservasController extends MovimientoControlador
         ];
     }
 
+    /** No se agenda hacia atrás: ni una reserva nueva ni mover una existente a una fecha que ya pasó (hora de la embarcación). */
+    protected function validar(array $valores, ?array $previo): void
+    {
+        $fecha = (string) $valores['fecha'];
+        $cambia = $previo === null || $fecha !== substr((string) $previo['fecha'], 0, 10);
+        if ($cambia && $fecha < date('Y-m-d')) {
+            throw new \InvalidArgumentException('No se pueden agendar reservas en fechas que ya pasaron.');
+        }
+    }
+
     protected function detalle(string $accion, array $b, ?array $previo): string
     {
         return '';

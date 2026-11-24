@@ -92,7 +92,7 @@ final class EstadoCuentaPdf
             $x = $extra($b['socio_id']);
             return 26 + 5 * 16 + 3 * 12 + 46 + ($x && (float) $x['liquidacion_extraordinaria'] > 0 ? 42 : 0) + 14;
         };
-        $cardH = max(array_map($alto, $data['balances']));
+        $cardH = max(array_map($alto, $data['balances']) ?: [0]);
         $h->necesito($cardH + 6);
         foreach ($data['balances'] as $i => $b) {
             $v = $variable($b['socio_id']);

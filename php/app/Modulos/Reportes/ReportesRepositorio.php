@@ -33,13 +33,19 @@ final class ReportesRepositorio
         return Db::filas(self::VIAJE_SELECT . ' WHERE v.periodo_id = ? ORDER BY v.fecha, v.id', [$periodoId]);
     }
 
-    /** PDF de respaldo (base64) de una partida del periodo. @param string $tabla gastos_operativos | insumos | extraordinarios */
+    /** Contenido (base64) de un adjunto. Se pide de uno en uno: cargar todos juntos agotaría la memoria con muchos comprobantes. */
+    public function datosDeAdjunto(int $id): string
+    {
+        return (string) (Db::fila('SELECT datos FROM adjuntos WHERE id = ?', [$id])['datos'] ?? '');
+    }
+
+    /** Comprobantes de una partida del periodo (sin su contenido: ver datosDeAdjunto). @param string $tabla gastos_operativos | insumos | extraordinarios */
     public function soportes(string $tabla, int $periodoId): array
     {
         $col = ['gastos_operativos' => 'gasto_id', 'insumos' => 'insumo_id', 'extraordinarios' => 'extraordinario_id'][$tabla]
             ?? throw new \LogicException("Tabla sin soportes: $tabla");
         return Db::filas(
-            "SELECT a.datos, t.concepto, t.comprobante_folio, t.monto_mxn
+            "SELECT a.id AS adjunto_id, t.concepto, t.comprobante_folio, t.monto_mxn
                FROM adjuntos a JOIN `$tabla` t ON t.id = a.`$col`
               WHERE t.periodo_id = ? ORDER BY t.fecha, t.id, a.id",
             [$periodoId]
@@ -56,7 +62,7 @@ final class ReportesRepositorio
 
     public function cajaAdjuntos(): array
     {
-        return Db::filas('SELECT id, caja_id, nombre, datos FROM adjuntos WHERE caja_id IS NOT NULL ORDER BY caja_id, id');
+        return Db::filas('SELECT id, caja_id, nombre FROM adjuntos WHERE caja_id IS NOT NULL ORDER BY caja_id, id');
     }
 
     /** Gasto operativo con los datos que necesita su recibo. */
@@ -77,10 +83,13 @@ final class ReportesRepositorio
         if (!in_array($columna, ['gasto_id', 'periodo_id'], true)) {
             throw new \LogicException("Columna no permitida: $columna");
         }
-        Db::ejecutar("DELETE FROM adjuntos WHERE `$columna` = ? AND generado = 1", [$id]);
-        Db::ejecutar(
-            "INSERT INTO adjuntos (`$columna`, nombre, mime, datos, generado) VALUES (?, ?, 'application/pdf', ?, 1)",
-            [$id, $nombre, base64_encode($pdf)]
-        );
+        // Una sola transacción: si el INSERT falla no se pierde el recibo anterior, y dos ejecuciones simultáneas no dejan dos.
+        Db::transaccion(function () use ($columna, $id, $nombre, $pdf) {
+            Db::ejecutar("DELETE FROM adjuntos WHERE `$columna` = ? AND generado = 1", [$id]);
+            Db::ejecutar(
+                "INSERT INTO adjuntos (`$columna`, nombre, mime, datos, generado) VALUES (?, ?, 'application/pdf', ?, 1)",
+                [$id, $nombre, base64_encode($pdf)]
+            );
+        });
     }
 }

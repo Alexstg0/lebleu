@@ -65,7 +65,7 @@ final class EstadoCuentaServicio
         $totalPrevAcum = Dinero::aCentavos($this->repo->extraTotalAnterior($embId, $claveActual));
         $socios = $this->repo->sociosActivos();
         $abonos = $this->repo->abonosExtra($embId);
-        $ultimoId = max(array_map(fn($s) => (int) $s['id'], $socios));
+        $ultimoId = $socios ? max(array_map(fn($s) => (int) $s['id'], $socios)) : 0;
 
         return array_map(function ($s) use ($totalMes, $totalPrevAcum, $abonos, $periodoId, $claveActual, $ultimoId) {
             $esUltimo = (int) $s['id'] === $ultimoId;

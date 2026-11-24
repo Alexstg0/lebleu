@@ -1,2 +1,24 @@
 /* Complementos de la versión PHP (globals.css se conserva idéntico al original). */
 [hidden] { display: none !important; }
+
+/* Arrastrar y soltar un archivo de respaldo: la zona se resalta mientras se arrastra encima. */
+.soltando { outline: 2px dashed var(--ocean); outline-offset: 3px; background: var(--bg2); border-radius: 12px; }
+
+/* Calendario ESTÁTICO: las siete columnas y todas las filas miden siempre lo mismo, sin importar lo que lleve cada día.
+   Lo que no cabe se recorta y se despliega con "+N más" (la celda se abre encima, sin mover la cuadrícula). */
+@media screen {
+  .cal-head, .cal-body { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .cal-body { grid-auto-rows: 132px; }
+  .cal-cell { height: 132px; min-height: 0; min-width: 0; overflow: hidden; }
+  .cal-cell:not(.abierta) .cal-chip-notas { display: none; }
+  .cal-chip { min-width: 0; }
+  .cal-chip .name { display: block; }
+  .cal-cell:not(.abierta) .cal-chip .meta { white-space: nowrap; overflow: hidden; }
+  .cal-chip.oculta { display: none; }
+  .cal-cell.abierta { height: auto; min-height: 132px; align-self: start; overflow: visible; z-index: 6; box-shadow: 0 10px 30px rgba(26, 58, 92, 0.22); border-radius: 10px; }
+  .cal-cell.abierta .cal-chip.oculta { display: flex; }
+  .cal-cell.abierta .cal-chip .name, .cal-cell.abierta .cal-chip .meta { white-space: normal; }
+  .cal-mas { display: block; width: 100%; margin-top: 4px; padding: 3px 6px; border: none; border-radius: 8px; background: var(--bg2); color: var(--ocean); font-size: 11px; font-weight: 600; text-align: left; cursor: pointer; }
+  .cal-mas:hover { background: var(--teal); color: #fff; }
+}
+@media print { .cal-mas { display: none !important; } .cal-chip.oculta { display: flex !important; } }

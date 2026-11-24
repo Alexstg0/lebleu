@@ -301,3 +301,26 @@ Siguiente: fase 6 (afinar permisos por rol con una pasada completa) y fase 7 (II
 - **No probado por no tener el entorno:** PHP bajo IIS/FastCGI, HTTPS real, DNS, MySQL 8 real (aquí MariaDB 10.11), `instalar_tareas.bat` y los `.bat` en Windows.
   La prueba de humo y el verificador están hechos justo para detectarlo el primer día.
 
+**Cambios pedidos tras la revisión con la versión en producción**
+- **Arrastrar y soltar:** los formularios de gasto, insumo y extraordinario aceptan soltar el archivo de soporte sobre el formulario (se resalta, se valida y se sube al guardar), y en Movimientos y Caja chica se puede soltar sobre la caja de respaldos del renglón (se sube al instante). Un solo archivo a la vez; PDF/JPG/PNG de hasta 3 MB.
+- **Calendario estático:** siete columnas iguales y filas de alto fijo (132 px) sin importar lo que lleve cada día; el texto largo se recorta con "…" y lo que no cabe se resume en **"+N más"**, que despliega ese día encima sin mover la cuadrícula (se cierra al pulsar fuera). Esto **difiere a propósito del original**, cuya cuadrícula se deformaba con el contenido. Prueba con navegador real incluida.
+- **No se agenda hacia atrás:** los días que ya pasaron no tienen "+" (escritorio ni móvil); el servidor rechaza crear una reserva en una fecha pasada o mover una existente a una fecha pasada (hoy sí se puede). Una reserva que ya pasó se puede abrir y completar (notas, duración…), pero su fecha queda bloqueada. Se aplica la fecha de la embarcación.
+
+**Revisión independiente del código** (un revisor sin contexto leyó todo `php/` y reportó 15 hallazgos; verifiqué y corregí lo siguiente, cada uno con prueba en `pruebas/revision.php`):
+- PDF hostiles (árbol de páginas con hijos repetidos, xref sin anchos, bombas de descompresión) podían agotar la memoria y tumbar todos los reportes de un periodo: ahora se rechazan rápido, con tope de páginas y de bytes descomprimidos.
+- Foto con dimensiones declaradas enormes (9000×9000) agotaba la memoria: tope de 25 megapíxeles con mensaje claro.
+- Límite de intentos de login: variantes con acentos/mayúsculas del mismo correo caían en contadores distintos (MySQL las trata como la misma cuenta) y las peticiones en paralelo lo saltaban. Ahora se cuenta por cuenta, antes de verificar, más un tope por IP.
+- Login: el hash señuelo se recalculaba en cada petición (162 ms con usuario existente contra 343 ms sin él: delataba qué correos existen). Ahora se calcula una vez y se guarda.
+- Cargos recurrentes: la clave pasa a ser **única** en la base (`003_clave_recurrente_unica.sql`; evita duplicar la nómina si el cron y el botón coinciden), el botón ya no escribe en periodos **cerrados**, y un cargo sin recibo por un fallo anterior lo recupera el siguiente intento. Guardar un recibo generado es una sola transacción.
+- Un insumo ya no puede asignarse a un viaje de otro periodo (movía el costo de un mes cerrado).
+- No se puede desactivar al único administrador activo.
+- Los reportes leen cada comprobante de la base al momento de unirlo (antes cargaban todos en memoria).
+- Defensa extra contra CSRF (escrituras de la API enviadas desde otro sitio se rechazan con `Sec-Fetch-Site`), ruta original bajo IIS (`X-Original-URL`), `X-Forwarded-Proto` solo si `confiar_proxy` está activo, purga diaria de sesiones vencidas e intentos viejos (en el script del cron), y listas vacías que reventaban el estado de cuenta.
+
+**Hallazgos que NO cambié (decisión tuya, o paridad con el original):**
+- **El capitán puede editar costos de cualquier viaje de un periodo abierto** (`PATCH /api/viajes`, igual que el original). Contradice "capitán sin ver montos". Se arregla recalculando costos en el servidor o limitando al capitán a lo que él registró: dime cuál prefieres.
+- Registrar un pago de extraordinario, subir/borrar adjuntos y regenerar un recibo **sí** funcionan en periodos cerrados (también en el original; puede ser intencional: liquidar o adjuntar después del cierre).
+- Textos muy largos sin espacios se salen del recibo (igual que el original).
+- Respaldo `.bat`: `Compress-Archive` de PowerShell 5.1 falla con archivos de más de 2 GB; si la base crece hasta ahí, cambiar a 7-Zip.
+- `iconv` bajo Windows (win-iconv) puede tratar distinto algunos caracteres raros en los PDF: no verificable aquí; la prueba de humo en el servidor lo mostraría.
+

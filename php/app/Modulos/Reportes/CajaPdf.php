@@ -47,7 +47,7 @@ final class CajaPdf
                 . ' · ' . Recibo::mxn($m['tipo'] === 'abono' ? $m['abono'] : $m['monto']);
             foreach ($porMov[(int) $m['id']] ?? [] as $a) {
                 try {
-                    $f->agregar((string) base64_decode($a['datos'], false), function (float $pw) use ($sello, $medidor) {
+                    $f->agregar((string) base64_decode($this->repo->datosDeAdjunto((int) $a['id']), false), function (float $pw) use ($sello, $medidor) {
                         return self::ajustar($medidor, $sello, 8, $pw - 20, true);
                     });
                 } catch (\Throwable) {

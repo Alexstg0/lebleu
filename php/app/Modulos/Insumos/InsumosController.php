@@ -39,6 +39,15 @@ final class InsumosController extends MovimientoControlador
         return Entrada::entero($b, 'periodo_id', 'El periodo', false);
     }
 
+    /** El viaje al que se asigna un insumo debe ser del mismo periodo (si no, se movería el costo de un mes ajeno). */
+    protected function validar(array $valores, ?array $previo): void
+    {
+        $viaje = (int) ($valores['viaje_id'] ?? 0);
+        if ($viaje && (new InsumosRepositorio())->periodoDeViaje($viaje) !== (int) $valores['periodo_id']) {
+            throw new \InvalidArgumentException('El viaje no pertenece al periodo del insumo.');
+        }
+    }
+
     protected function alGuardar(int $id, array $b, ?array $previo): void
     {
         $repo = new InsumosRepositorio();

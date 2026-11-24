@@ -67,7 +67,7 @@ final class SoportesPdf
     private function incrustar(Fusionador $f, array $r): void
     {
         try {
-            $f->agregar((string) base64_decode($r['datos'], false));
+            $f->agregar((string) base64_decode($this->repo->datosDeAdjunto((int) $r['adjunto_id']), false));
         } catch (\Throwable) {
             $l = new Lienzo();
             $l->nuevaPagina();

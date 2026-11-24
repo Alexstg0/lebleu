@@ -33,4 +33,10 @@ final class InsumosRepositorio extends MovimientoRepositorio
             );
         }
     }
+
+    public function periodoDeViaje(int $viajeId): ?int
+    {
+        $f = Db::fila('SELECT periodo_id FROM viajes WHERE id = ?', [$viajeId]);
+        return $f ? (int) $f['periodo_id'] : null;
+    }
 }

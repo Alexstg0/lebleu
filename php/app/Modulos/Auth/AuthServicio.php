@@ -8,6 +8,7 @@ final class AuthServicio
 {
     public const COOKIE = 'sid';
     public const MAX_INTENTOS = 8;
+    public const MAX_INTENTOS_IP = 60;
     public const VENTANA_MIN = 10;
     public const DIAS_SESION = 30;
 
@@ -19,17 +20,22 @@ final class AuthServicio
     /** @return array{ok: bool, estado: int, error?: string, token?: string, rol?: string} */
     public function iniciarSesion(string $email, string $clave, string $ip): array
     {
-        $llave = $ip . ':' . strtolower($email);
-        if ($this->repo->intentosVigentes($llave, self::VENTANA_MIN) >= self::MAX_INTENTOS) {
+        $u = $this->repo->usuarioActivoPorEmail($email);
+        // El límite se cuenta por CUENTA (su id), no por el texto escrito: MySQL compara el correo sin acentos ni mayúsculas,
+        // así que variantes del mismo correo entran a la misma cuenta y deben caer en el mismo contador. Además hay un tope por IP.
+        $llave = $ip . ':' . ($u ? 'u' . $u['id'] : 'e' . mb_strtolower($email));
+        $llaveIp = 'ip:' . $ip;
+        if ($this->repo->intentosVigentes($llave, self::VENTANA_MIN) >= self::MAX_INTENTOS
+            || $this->repo->intentosVigentes($llaveIp, self::VENTANA_MIN) >= self::MAX_INTENTOS_IP) {
             return ['ok' => false, 'estado' => 429,
                     'error' => 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.'];
         }
-
-        $u = $this->repo->usuarioActivoPorEmail($email);
+        // El intento se cuenta ANTES de verificar la contraseña: peticiones en paralelo no pueden saltarse el límite.
+        $this->repo->registrarFallo($llave, self::VENTANA_MIN);
         // Se verifica SIEMPRE (contra el hash real o el señuelo) para que tarde lo mismo exista o no.
         $claveOk = Clave::verificar($clave, $u['password_hash'] ?? Clave::senuelo());
         if (!$u || !$claveOk) {
-            $this->repo->registrarFallo($llave, self::VENTANA_MIN);
+            $this->repo->registrarFallo($llaveIp, self::VENTANA_MIN); // el tope por IP cuenta solo los fallos
             return ['ok' => false, 'estado' => 401, 'error' => 'Correo o contraseña incorrectos.'];
         }
 

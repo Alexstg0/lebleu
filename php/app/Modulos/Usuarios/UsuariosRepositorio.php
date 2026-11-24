@@ -25,6 +25,17 @@ final class UsuariosRepositorio
         return (bool) Db::fila('SELECT 1 FROM usuarios WHERE id = ?', [$id]);
     }
 
+    public function esAdminActivo(int $id): bool
+    {
+        return (bool) Db::fila("SELECT 1 FROM usuarios WHERE id = ? AND rol = 'admin' AND activo = 1", [$id]);
+    }
+
+    /** Administradores activos distintos de $exceptoId. */
+    public function otrosAdminsActivos(int $exceptoId): int
+    {
+        return (int) Db::fila("SELECT COUNT(*) n FROM usuarios WHERE rol = 'admin' AND activo = 1 AND id <> ?", [$exceptoId])['n'];
+    }
+
     public function fijarClave(int $id, string $hash): void
     {
         Db::ejecutar('UPDATE usuarios SET password_hash = ? WHERE id = ?', [$hash, $id]);

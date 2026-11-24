@@ -29,6 +29,12 @@ final class Ruteador
             if ($metodo !== $p->metodo) {
                 continue;
             }
+            // Defensa extra contra CSRF: una escritura de la API enviada por otro sitio (aunque sea del mismo dominio padre) se rechaza.
+            // Los navegadores modernos mandan Sec-Fetch-Site; las pruebas y los scripts de servidor no lo mandan y pasan.
+            if ($p->esApi() && !in_array($p->metodo, ['GET', 'HEAD'], true)
+                && in_array(strtolower($p->cabecera('Sec-Fetch-Site')), ['cross-site', 'same-site'], true)) {
+                return Respuesta::error('Origen no permitido.', 403);
+            }
             $args = array_filter($m, 'is_string', ARRAY_FILTER_USE_KEY);
             [$clase, $accion] = $manejador;
             return (new $clase())->$accion($p, $args);

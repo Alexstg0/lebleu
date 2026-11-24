@@ -6,6 +6,7 @@ namespace Lebleu\Compartido\Pdf;
 final class LectorPdf
 {
     private const MAX_PROFUNDIDAD = 64;
+    private const MAX_PAGINAS = 2000;
 
     /** @var array<int, array{o?: int, s?: int, i?: int}> */
     private array $xref = [];
@@ -66,12 +67,16 @@ final class LectorPdf
     {
         $raiz = $this->resolver($this->trailer->clave('Root'));
         $paginas = [];
-        $this->recorrer($raiz->clave('Pages'), [], $paginas, [], 0);
+        $visitados = [];
+        $this->recorrer($raiz->clave('Pages'), [], $paginas, $visitados, 0);
         return $paginas;
     }
 
-    private function recorrer(mixed $nodo, array $heredado, array &$salida, array $visitados, int $nivel): void
+    private function recorrer(mixed $nodo, array $heredado, array &$salida, array &$visitados, int $nivel): void
     {
+        if (count($salida) > self::MAX_PAGINAS) {
+            throw new \RuntimeException('El PDF tiene demasiadas páginas.');
+        }
         $ref = $nodo instanceof Valor && $nodo->es(Valor::REF) ? $nodo->v[0] : null;
         if ($ref !== null) {
             if (isset($visitados[$ref]) || $nivel > self::MAX_PROFUNDIDAD) {
@@ -209,12 +214,16 @@ final class LectorPdf
             throw new \RuntimeException('Flujo xref no válido.');
         }
         $w = $f->clave('W');
+        if (!is_array($w) || count($w) !== 3 || array_filter($w, fn($x) => !is_int($x) || $x < 0 || $x > 8) || array_sum($w) === 0) {
+            throw new \RuntimeException('Anchos del flujo xref no válidos.');
+        }
         $datos = $this->decodificar($f);
         $indice = $f->clave('Index') ?? [0, (int) $f->clave('Size')];
         $ancho = $w[0] + $w[1] + $w[2];
         $p = 0;
         for ($k = 0; $k + 1 < count($indice); $k += 2) {
-            for ($i = 0; $i < $indice[$k + 1]; $i++, $p += $ancho) {
+            // Nunca más entradas de las que caben en los datos (un /Index enorme no debe agotar la memoria).
+            for ($i = 0, $n = min((int) $indice[$k + 1], intdiv(strlen($datos), $ancho)); $i < $n; $i++, $p += $ancho) {
                 if ($p + $ancho > strlen($datos)) {
                     break 2;
                 }

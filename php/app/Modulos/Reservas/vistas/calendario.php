@@ -71,7 +71,9 @@ $datos = ['anio' => $anio, 'mes' => $mes, 'hoy' => $hoy, 'reservas' => $reservas
         <div class="<?= implode(' ', $clases) ?>">
           <?php if ($d): ?>
           <span class="cal-daynum"><?= $d ?></span>
+          <?php if ($fecha >= $hoy): /* no se agenda hacia atrás: los días que ya pasaron no tienen "+" */ ?>
           <button class="cal-add" data-nueva="<?= $fecha ?>" aria-label="Agregar reserva el <?= $d ?>"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+          <?php endif; ?>
           <?php foreach ($porDia[$d] ?? [] as $r): $m = $meta($r); ?>
           <button class="cal-chip <?= $fam($r) ?> <?= $r['fecha'] < $hoy ? 'past' : '' ?>" data-reserva="<?= $r['id'] ?>">
             <span class="dot"></span>
