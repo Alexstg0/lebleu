@@ -268,7 +268,7 @@ Contraseñas: se conserva el mínimo de 6 caracteres del original (conviene subi
   `pdftoppm` y compara píxeles y texto): **594 páginas, ninguna diferencia notable (≤ 0.008 %, suavizado de letra)**. Cazó cuatro defectos míos que ya no están: pdf-lib mide
   el texto *con kerning* y FPDF no (centrados y recortes con "…" salían distintos; se exportaron los pares de Helvetica a `kerning.php`), "4 h" salía "4.00 h", un círculo
   dibujado con el eje Y volteado y un orden de comprobantes.
-- **Pruebas:** `fase5.php` (50 comprobaciones: permisos, 400/403/404, nosniff, comprobante dañado, archivo al cerrar, recibos, recurrentes con recibo, fusión de los 141
+- **Pruebas:** `fase5.php` (48 comprobaciones: permisos, 400/403/404, nosniff, comprobante dañado, archivo al cerrar, recibos, recurrentes con recibo, fusión de los 141
   comprobantes reales), `interfaz_fase5` con navegador real (30) y `rutas_paridad.php`: las 61 rutas del original (12 páginas + 49 métodos de API), 59 existen y 2 son
   excepciones documentadas, ninguna falta. Auditoría visual de las 12 pantallas en escritorio y móvil: solo difiere el indicador de Next.js.
 
