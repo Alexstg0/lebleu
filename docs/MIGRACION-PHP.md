@@ -311,13 +311,14 @@ Siguiente: fase 6 (afinar permisos por rol con una pasada completa) y fase 7 (II
 - Foto con dimensiones declaradas enormes (9000×9000) agotaba la memoria: tope de 25 megapíxeles con mensaje claro.
 - Límite de intentos de login: variantes con acentos/mayúsculas del mismo correo caían en contadores distintos (MySQL las trata como la misma cuenta) y las peticiones en paralelo lo saltaban. Ahora se cuenta por cuenta, antes de verificar, más un tope por IP.
 - Login: el hash señuelo se recalculaba en cada petición (162 ms con usuario existente contra 343 ms sin él: delataba qué correos existen). Ahora se calcula una vez y se guarda.
-- Cargos recurrentes: la clave pasa a ser **única** en la base (`003_clave_recurrente_unica.sql`; evita duplicar la nómina si el cron y el botón coinciden), el botón ya no escribe en periodos **cerrados**, y un cargo sin recibo por un fallo anterior lo recupera el siguiente intento. Guardar un recibo generado es una sola transacción.
+- Cargos recurrentes: la clave pasa a ser **única** en la base (`003_clave_recurrente_unica.sql`; evita duplicar la nómina si el cron y el botón coinciden), y un cargo sin recibo por un fallo anterior lo recupera el siguiente intento. Guardar un recibo generado es una sola transacción.
 - Un insumo ya no puede asignarse a un viaje de otro periodo (movía el costo de un mes cerrado).
 - No se puede desactivar al único administrador activo.
 - Los reportes leen cada comprobante de la base al momento de unirlo (antes cargaban todos en memoria).
 - Defensa extra contra CSRF (escrituras de la API enviadas desde otro sitio se rechazan con `Sec-Fetch-Site`), ruta original bajo IIS (`X-Original-URL`), `X-Forwarded-Proto` solo si `confiar_proxy` está activo, purga diaria de sesiones vencidas e intentos viejos (en el script del cron), y listas vacías que reventaban el estado de cuenta.
 
-**Hallazgos que NO cambié (decisión tuya, o paridad con el original):**
+**Hallazgos que NO cambié (decisión de Alex: por ahora se replica el original tal cual):**
+- El botón *Generar nómina y administrativo* también genera en periodos cerrados (igual que el original; solo el cron los salta).
 - **El capitán puede editar costos de cualquier viaje de un periodo abierto** (`PATCH /api/viajes`, igual que el original). Contradice "capitán sin ver montos". Se arregla recalculando costos en el servidor o limitando al capitán a lo que él registró: dime cuál prefieres.
 - Registrar un pago de extraordinario, subir/borrar adjuntos y regenerar un recibo **sí** funcionan en periodos cerrados (también en el original; puede ser intencional: liquidar o adjuntar después del cierre).
 - Textos muy largos sin espacios se salen del recibo (igual que el original).

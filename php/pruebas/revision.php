@@ -90,14 +90,11 @@ Db::simular(function () {
     [$e, $d] = llamar(new UsuariosController(), 'editar', $admin, ['id' => $yo, 'activo' => false]);
     afirmar('no se puede desactivar al único administrador activo', $e === 400 && str_contains($d['error'], 'único administrador') && (int) Db::fila('SELECT activo FROM usuarios WHERE id = ?', [$yo])['activo'] === 1, json_encode($d));
 
-    // ---------- Recurrentes: no en periodos cerrados
+    // ---------- Recurrentes: el botón se comporta como el original (también en periodos cerrados)
     Db::ejecutar("INSERT INTO periodos (embarcacion_id, anio, mes, tipo_cambio, precio_litro, cargo_administracion, estado) VALUES (1, 2097, 5, 1, 1, 0, 'cerrado')");
     $cerrado = (int) Db::ultimoId();
-    $antes = cuenta('gastos_operativos');
-    [$e, $d] = llamar(new RecurrentesController(), 'generar', $admin, ['periodoId' => $cerrado]);
-    afirmar('generar cargos en un periodo cerrado se rechaza', $e === 400 && str_contains($d['error'], 'cerrado') && cuenta('gastos_operativos') === $antes, json_encode($d));
-    [$e, $d] = llamar(new RecurrentesController(), 'generar', $admin, []);
-    afirmar('generar "todos" se salta los periodos cerrados', $e === 200 && !Db::fila('SELECT 1 FROM gastos_operativos WHERE periodo_id = ?', [$cerrado]));
+    [$e] = llamar(new RecurrentesController(), 'generar', $admin, ['periodoId' => $cerrado]);
+    afirmar('generar cargos en un periodo cerrado funciona como en el original', $e === 200);
 
     // ---------- Recurrentes: clave única y recibo que se recupera
     Db::ejecutar("INSERT INTO periodos (embarcacion_id, anio, mes, tipo_cambio, precio_litro, cargo_administracion, estado) VALUES (1, 2096, 2, 1, 1, 0, 'abierto')");

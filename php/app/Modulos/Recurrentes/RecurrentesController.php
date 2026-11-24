@@ -20,11 +20,8 @@ final class RecurrentesController
             $periodos = (new PeriodosServicio())->listar();
             if ($pedido) {
                 $periodos = array_values(array_filter($periodos, fn($x) => (int) $x['id'] === $pedido));
-                if ($periodos && $periodos[0]['estado'] === 'cerrado') {
-                    return Respuesta::error('El periodo está cerrado: ya no se generan cargos en él. Reábrelo en la pestaña Periodos.', 400);
-                }
             }
-            $periodos = array_values(array_filter($periodos, fn($x) => $x['estado'] !== 'cerrado'));
+            // Igual que el original: el botón genera en el periodo pedido o en todos, estén abiertos o cerrados (solo el cron salta los cerrados).
             $servicio = Servicios::recurrentes();
             $nomina = $admin = 0;
             foreach ($periodos as $periodo) {
