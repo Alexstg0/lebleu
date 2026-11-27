@@ -13,3 +13,6 @@ db/*.zip
 *.sql.gz
 *.zip
 db_esquema_*.zip
+
+# Respaldos con datos: guardar fuera del repositorio
+datos_*.sql

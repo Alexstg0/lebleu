@@ -6,8 +6,7 @@ Reemplazo de la app Next.js (ver `../docs/MIGRACION-PHP.md`). Misma funcionalida
 1. Crear la base: `CREATE DATABASE lebleu CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;` y un usuario con permisos sobre ella.
 2. Copiar `config/config.ejemplo.php` a `config/config.php` y llenar la conexión.
 3. `php scripts/migrar.php` (crea tablas y vistas; re-ejecutable).
-4. Datos: `php scripts/importar_respaldo.php ../db/datos_20260826.sql` y luego `php scripts/restablecer_claves.php`
-   (**usar `datos_20260826.sql`; el `_clean.sql` está corrupto**). Base nueva sin datos: `ADMIN_EMAIL=... ADMIN_PW=... php scripts/crear_admin.php`.
+4. Para restaurar datos, usa solamente un respaldo autorizado guardado fuera del repositorio: `php scripts/importar_respaldo.php /ruta/privada/respaldo.sql`. Consulta el procedimiento interno antes de restablecer claves en una instalación existente. Base nueva sin datos: `ADMIN_EMAIL=... ADMIN_PW=... php scripts/crear_admin.php`.
 5. `php -S 127.0.0.1:8080 -t public public/index.php` y abrir http://127.0.0.1:8080/api/salud
 
 En IIS el sitio apunta a `public/` (lleva su `web.config`; requiere URL Rewrite).
